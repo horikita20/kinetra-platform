@@ -1,0 +1,605 @@
+KINETRA – COMPLETE BUILD SPECIFICATION
+
+Create a production-quality web application called KINETRA.
+
+Project Overview
+
+KINETRA is a real-time Computer Vision-based Sports Form & Biomechanics Analysis platform.
+
+The MVP focuses on Cricket Technique Analysis using a laptop or smartphone camera.
+
+The application must be fully functional, deployable, and capable of running a live hackathon demonstration.
+
+The platform must analyze cricket movements in real time using Computer Vision, Pose Estimation, and Biomechanics Analysis.
+
+The system must use:
+
+React
+TypeScript
+TailwindCSS
+Framer Motion
+FastAPI
+Python
+MediaPipe Pose
+OpenCV
+NumPy
+WebSockets
+
+The application must look professionally designed and must not resemble a typical AI-generated website or generic template.
+
+Use:
+
+Light theme
+White backgrounds
+Soft blue accents
+Glassmorphism cards
+Smooth transitions
+Premium spacing
+Modern typography
+Framer Motion animations
+Responsive mobile and desktop layouts
+
+The final result should feel like a polished sports-tech startup MVP suitable for hackathons, investor demos, and future commercialization.
+
+CORE GOAL
+
+Analyze cricket movements through a webcam.
+
+Detect body landmarks and calculate:
+
+Elbow Angle
+Knee Angle
+Shoulder Alignment
+Spine Tilt
+Head Position
+Body Balance
+Follow-Through Posture
+
+Provide:
+
+Real-time feedback
+Visual posture corrections
+Technique scoring
+Performance recommendations
+CRITICAL REQUIREMENT
+
+DO NOT:
+
+Simulate analysis
+Generate random scores
+Create fake posture feedback
+Use placeholder data
+
+ALL analysis must come from actual MediaPipe Pose landmarks.
+
+ALL scores must be calculated from real posture measurements.
+
+The MVP must genuinely work.
+
+APPLICATION PAGES
+
+Only 4 pages.
+
+PAGE 1 – HOME
+
+Professional landing page.
+
+Hero Section
+
+Headline:
+
+"Real-Time Sports Form & Biomechanics Analysis"
+
+Subheadline:
+
+"Improve technique, reduce injury risk, and train smarter using computer vision."
+
+Buttons:
+
+Try Demo
+Learn More
+Interactive Sports-Tech Visualization
+
+Create an animated visual.
+
+Show:
+
+Human skeleton animation
+Motion tracking effects
+Floating biomechanics metrics
+Dynamic landmark visualization
+
+No stock images.
+
+Must feel premium.
+
+Features Section
+
+Feature Cards:
+
+Real-Time Pose Tracking
+Motion Analysis
+Technique Scoring
+Injury Prevention
+
+Animate on scroll.
+
+Problem & Solution Section
+
+Problem:
+
+Athletes lack access to biomechanical coaching.
+
+Solution:
+
+Computer vision provides instant technique feedback.
+
+Footer
+
+Clean SaaS-style footer.
+
+PAGE 2 – ANALYSIS SETUP
+
+User chooses:
+
+Analysis Type
+
+Cards:
+
+Bowling Analysis
+Batting Analysis
+Athlete Information
+
+Fields:
+
+Name
+Skill Level
+Dominant Hand
+Analysis Mode
+
+Button:
+
+Start Analysis
+
+Redirect to Live Analysis Page.
+
+PAGE 3 – LIVE ANALYSIS
+
+This is the most important page.
+
+Must actually work.
+
+Webcam Integration
+
+Request webcam permission.
+
+Display live camera feed.
+
+Pose Detection
+
+Use MediaPipe Pose.
+
+Detect:
+
+Nose
+Left Shoulder
+Right Shoulder
+Left Elbow
+Right Elbow
+Left Wrist
+Right Wrist
+Left Hip
+Right Hip
+Left Knee
+Right Knee
+Left Ankle
+Right Ankle
+
+Draw:
+
+Skeleton
+Landmark points
+Joint connections
+Visual Corrections
+
+Correct joints:
+
+Green
+
+Incorrect joints:
+
+Red
+
+Real-time highlighting.
+
+Metrics Dashboard
+
+Display continuously:
+
+Elbow Angle
+Knee Angle
+Shoulder Alignment
+Spine Tilt
+Head Stability
+Balance Score
+Technique Score
+
+Update in real time.
+
+Feedback Engine
+Bowling Feedback
+
+Detect:
+
+Elbow too low
+Excessive spine tilt
+Poor front-foot alignment
+Poor shoulder rotation
+Incomplete follow-through
+Batting Feedback
+
+Detect:
+
+Bat lift too low
+Head movement excessive
+Front foot delayed
+Shoulder alignment poor
+Balance unstable
+
+Display warnings live.
+
+Session Summary
+
+At end of session display:
+
+Strengths
+Areas for Improvement
+Recommendations
+Overall Technique Score
+PAGE 4 – ABOUT KINETRA
+
+Explain:
+
+Problem
+
+Lack of affordable biomechanical coaching.
+
+Technology
+Computer Vision
+Pose Estimation
+Motion Analysis
+Sports Biomechanics
+Future Scope
+Multiple sports
+Academy integration
+Mobile application
+Progress tracking
+Injury prediction
+Personalized training
+COMPLETE BACKEND ARCHITECTURE
+
+Build a FastAPI backend.
+
+Folder Structure:
+
+backend/
+│
+├── main.py
+│
+├── routes/
+│   ├── analysis.py
+│   ├── scoring.py
+│   └── session.py
+│
+├── services/
+│   ├── pose_detector.py
+│   ├── angle_calculator.py
+│   ├── cricket_analyzer.py
+│   ├── scoring_engine.py
+│   └── recommendation_engine.py
+│
+├── models/
+│   ├── athlete.py
+│   ├── analysis_result.py
+│   └── session_result.py
+│
+├── utils/
+│   ├── geometry.py
+│   ├── constants.py
+│   └── validators.py
+│
+└── requirements.txt
+BACKEND PROCESSING FLOW
+
+Step 1
+
+Frontend opens webcam.
+
+Step 2
+
+Frontend captures frames.
+
+Step 3
+
+Frames stream through WebSocket.
+
+Step 4
+
+Backend receives frames.
+
+Step 5
+
+MediaPipe Pose processes frames.
+
+Step 6
+
+Landmarks extracted.
+
+Step 7
+
+Biomechanical angles calculated.
+
+Step 8
+
+Cricket analysis engine evaluates posture.
+
+Step 9
+
+Scoring engine calculates scores.
+
+Step 10
+
+Recommendations generated.
+
+Step 11
+
+Results sent back through WebSocket.
+
+Step 12
+
+Frontend updates dashboard instantly.
+
+WEBSOCKET IMPLEMENTATION
+
+Use WebSockets.
+
+Do NOT upload video files repeatedly.
+
+Flow:
+
+Webcam
+↓
+React Frontend
+↓
+WebSocket
+↓
+FastAPI Backend
+↓
+MediaPipe Pose
+↓
+Angle Calculator
+↓
+Cricket Analyzer
+↓
+Scoring Engine
+↓
+WebSocket Response
+↓
+Frontend Dashboard
+
+Target latency:
+
+Less than 200ms.
+
+POSE ANALYSIS ENGINE
+
+Create reusable functions.
+
+Example:
+
+calculate_angle(point_a, point_b, point_c)
+
+Use vector mathematics.
+
+Do not hardcode values.
+
+Calculate:
+
+Elbow Angle
+Shoulder Angle
+Knee Angle
+Hip Angle
+Spine Tilt
+Head Alignment
+Foot Alignment
+BOWLING ANALYSIS RULES
+
+Evaluate:
+
+Elbow Angle
+
+Ideal:
+
+80° – 110°
+
+Spine Tilt
+
+Ideal:
+
+0° – 20°
+
+Front Foot Alignment
+
+Must remain within threshold.
+
+Shoulder Rotation
+
+Must remain within threshold.
+
+Follow Through
+
+Must be completed.
+
+Return warnings:
+
+Elbow angle too low
+Excessive spine tilt
+Front foot misaligned
+Poor shoulder rotation
+Incomplete follow-through
+BATTING ANALYSIS RULES
+
+Evaluate:
+
+Batting stance
+Head stability
+Front-foot movement
+Shoulder alignment
+Weight balance
+
+Warnings:
+
+Head moving excessively
+Front foot delayed
+Balance unstable
+Bat lift insufficient
+SCORING ENGINE
+
+Generate real scores.
+
+Components:
+
+Posture Accuracy = 30%
+
+Alignment = 25%
+
+Stability = 25%
+
+Movement Efficiency = 20%
+
+Formula:
+
+Overall Score =
+(Posture × 0.30)
++ (Alignment × 0.25)
++ (Stability × 0.25)
++ (Efficiency × 0.20)
+
+Output:
+
+{
+  "posture_score": 85,
+  "alignment_score": 90,
+  "stability_score": 80,
+  "efficiency_score": 88,
+  "overall_score": 86
+}
+RECOMMENDATION ENGINE
+
+Generate recommendations based on detected issues.
+
+Examples:
+
+If elbow angle poor:
+
+"Maintain elbow height during release."
+
+If spine tilt excessive:
+
+"Keep upper body more upright."
+
+If balance unstable:
+
+"Focus on stable landing mechanics."
+
+REQUIRED API ENDPOINTS
+Health Check
+GET /api/health
+
+Response:
+
+{
+  "status":"running"
+}
+Start Session
+POST /api/session/start
+
+Response:
+
+{
+  "session_id":"xyz123"
+}
+Analyze Frame
+POST /api/analyze/frame
+
+Input:
+
+Video Frame
+Session ID
+Analysis Type
+
+Output:
+
+{
+  "landmarks": [],
+  "angles": {},
+  "warnings": [],
+  "score": {}
+}
+End Session
+POST /api/session/end
+
+Response:
+
+{
+  "summary": {},
+  "recommendations": []
+}
+Session Results
+GET /api/session/{id}
+
+Response:
+
+{
+  "performance_score": 87,
+  "strengths": [],
+  "improvements": []
+}
+FRONTEND REQUIREMENTS
+
+Use:
+
+React
+TypeScript
+TailwindCSS
+Framer Motion
+
+Create reusable components.
+
+LIVE ANALYSIS LAYOUT
+Left Panel
+
+Live Webcam Feed
+
+Center Panel
+
+Skeleton Overlay
+
+Right Panel
+
+Metrics Dashboard
+
+Show:
+
+Elbow Angle
+Knee Angle
+Shoulder Alignment
+Spine Tilt
+Technique Score
+Warnings
+
+All values update continuously.
+
+FINAL DELIVERABLE
+
+Build a fully functional sports-tech MVP called KINETRA that uses real-time Computer Vision, MediaPipe Pose, biomechanical analysis, live feedback, performance scoring, and a professional SaaS-quality interface focused on cricket bowling and batting technique analysis.

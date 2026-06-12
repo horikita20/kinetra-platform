@@ -1,0 +1,246 @@
+DO NOT REBUILD THE PROJECT.
+
+ONLY FIX EXISTING ISSUES AND IMPROVE THE UI.
+
+========================
+CRITICAL BUG FIXES
+========================
+
+1. Fix MediaPipe Pose crash:
+
+Current error:
+"ROI width and height must be > 0"
+
+Before calling:
+poseLandmarker.detectForVideo(...)
+
+validate:
+
+- video.readyState >= 2
+- video.videoWidth > 0
+- video.videoHeight > 0
+- video.currentTime has changed
+- video element is not paused
+- video stream exists
+
+Skip detection when invalid.
+
+Add try/catch around detectForVideo().
+
+Never crash the analysis page.
+
+========================
+FIX CAMERA FLICKERING
+========================
+
+Investigate and fix:
+
+- repeated getUserMedia() calls
+- React component remounting
+- multiple MediaPipe instances
+- multiple camera streams
+- repeated canvas recreation
+
+Requirements:
+
+- camera stream created ONCE
+- MediaPipe initialized ONCE
+- canvas initialized ONCE
+- cleanup on unmount
+
+Throttle pose analysis to 15 FPS.
+
+Video should remain stable.
+
+========================
+HOME PAGE IMPROVEMENTS
+========================
+
+Current home page feels AI-generated and static.
+
+Transform into a modern startup-quality landing page.
+
+Do NOT make it flashy.
+
+Use:
+
+- premium spacing
+- smooth transitions
+- professional typography
+- subtle micro interactions
+- hover effects
+- scroll animations
+
+Keep performance high.
+
+========================
+NEW COLOR SYSTEM
+========================
+
+Replace blue theme.
+
+Use:
+
+Primary:
+#F28C28
+
+Secondary:
+#FFB562
+
+Accent:
+#FFE5C2
+
+Background:
+#FFF9F2
+
+Text:
+#1F2937
+
+Theme should feel:
+
+- modern
+- sports-tech
+- premium
+- energetic
+
+========================
+NAVIGATION
+========================
+
+Add sticky navbar:
+
+- Home
+- How It Works
+- Demo
+- Analysis
+
+Smooth scrolling.
+
+Active section highlighting.
+
+Mobile responsive.
+
+========================
+HOME PAGE HERO
+========================
+
+Replace empty hero area.
+
+Add cricket-focused visual.
+
+Use:
+
+- cricket bowler silhouette
+- animated pose landmarks
+- moving skeleton overlay
+- motion tracking effects
+- subtle floating metrics
+
+NO stock image look.
+
+NO generic AI illustration.
+
+Looks like real sports technology.
+
+========================
+HOW IT WORKS SECTION
+========================
+
+Create 4-step interactive section:
+
+1. Camera Capture
+2. Pose Detection
+3. Motion Analysis
+4. Technique Feedback
+
+Each card:
+
+- icon
+- animation
+- hover interaction
+
+========================
+DEMO SECTION
+========================
+
+Create dedicated Demo section.
+
+Show:
+
+- live analysis preview
+- posture score card
+- biomechanics metrics
+- diagnostic alerts
+
+Use realistic sample data.
+
+========================
+ANALYSIS PAGE
+========================
+
+Improve layout.
+
+Current page looks developer-oriented.
+
+Make it product-oriented.
+
+Layout:
+
+LEFT:
+Live camera
+
+CENTER:
+Skeleton tracking
+
+RIGHT:
+Metrics panel
+
+Cards:
+
+- Technique Score
+- Balance Score
+- Elbow Angle
+- Knee Angle
+- Spine Tilt
+- Shoulder Alignment
+
+Use modern cards.
+
+Add animated progress bars.
+
+========================
+VISUAL FEEDBACK
+========================
+
+Good posture:
+green
+
+Warning:
+orange
+
+Critical:
+red
+
+Highlight problematic joints directly on skeleton.
+
+========================
+PERFORMANCE
+========================
+
+Do NOT rewrite backend.
+
+Do NOT change scoring logic.
+
+Do NOT change API architecture.
+
+Only:
+
+- fix MediaPipe errors
+- fix camera flickering
+- improve UI
+- add navigation
+- add animations
+- add cricket-themed visuals
+
+Keep token usage minimal.
+Modify existing files wherever possible instead of generating new architecture.
