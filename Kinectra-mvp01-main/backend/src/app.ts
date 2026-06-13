@@ -39,7 +39,7 @@ app.use("/api", router);
 if (process.env.NODE_ENV === "production") {
   const publicPath = path.resolve(__dirname, "../../frontend/dist/public");
   app.use(express.static(publicPath));
-  app.get("*", (req, res, next) => {
+  app.get("*any", (req, res, next) => {
     if (req.path.startsWith("/api")) return next();
     res.sendFile(path.join(publicPath, "index.html"));
   });
