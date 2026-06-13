@@ -25,10 +25,10 @@ Real-time computer vision sports biomechanics analysis platform for cricket tech
 
 ## Where things live
 
-- `artifacts/kinetra/src/pages/` — 4 app pages (home, setup, analysis, results)
-- `artifacts/kinetra/src/hooks/use-kinetra-analysis.ts` — MediaPipe pose detection + angle calculation
-- `artifacts/kinetra/src/contexts/SessionContext.tsx` — session state shared between setup→analysis
-- `artifacts/api-server/src/routes/session.ts` — session CRUD + recommendation engine
+- `frontend/src/pages/` — 4 app pages (home, setup, analysis, results)
+- `frontend/src/hooks/use-kinetra-analysis.ts` — MediaPipe pose detection + angle calculation
+- `frontend/src/contexts/SessionContext.tsx` — session state shared between setup→analysis
+- `backend/src/routes/session.ts` — session CRUD + recommendation engine
 - `lib/db/src/schema/sessions.ts` — DB schema for analysis sessions
 - `lib/api-spec/openapi.yaml` — API contract (source of truth)
 
