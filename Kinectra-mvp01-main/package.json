@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "build": "pnpm run typecheck && pnpm -r --if-present run build",
+    "build": "pnpm run typecheck && pnpm -r --if-present run build && (pip install -r backend/requirements.txt || pip3 install -r backend/requirements.txt || python3 -m pip install -r backend/requirements.txt || true)",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter @workspace/kinetra --filter @workspace/api-server --if-present run typecheck"
   },

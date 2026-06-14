@@ -18,4 +18,9 @@ export interface Session {
   dominantHand: SessionDominantHand;
   createdAt: string;
   status: SessionStatus;
+  coachFeedback?: string;
+  injuryRisk?: string;
+  trainingPlan?: string;
+  progressReport?: string;
+  snapshots?: string;
 }

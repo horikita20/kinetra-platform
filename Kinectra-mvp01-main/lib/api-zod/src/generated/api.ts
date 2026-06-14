@@ -34,7 +34,12 @@ export const StartSessionResponse = zod.object({
   "skillLevel": zod.enum(['beginner', 'intermediate', 'advanced', 'professional']),
   "dominantHand": zod.enum(['right', 'left']),
   "createdAt": zod.string(),
-  "status": zod.enum(['active', 'completed'])
+  "status": zod.enum(['active', 'completed']),
+  "coachFeedback": zod.string().optional(),
+  "injuryRisk": zod.string().optional(),
+  "trainingPlan": zod.string().optional(),
+  "progressReport": zod.string().optional(),
+  "snapshots": zod.string().optional()
 })
 
 
@@ -52,7 +57,8 @@ export const EndSessionBody = zod.object({
   "avgStabilityScore": zod.number(),
   "avgEfficiencyScore": zod.number(),
   "overallScore": zod.number(),
-  "warnings": zod.array(zod.string())
+  "warnings": zod.array(zod.string()),
+  "snapshots": zod.string().optional()
 })
 
 export const EndSessionResponse = zod.object({
@@ -72,7 +78,12 @@ export const EndSessionResponse = zod.object({
   "strengths": zod.array(zod.string()),
   "improvements": zod.array(zod.string()),
   "recommendations": zod.array(zod.string()),
-  "warnings": zod.array(zod.string())
+  "warnings": zod.array(zod.string()),
+  "coachFeedback": zod.string().optional(),
+  "injuryRisk": zod.string().optional(),
+  "trainingPlan": zod.string().optional(),
+  "progressReport": zod.string().optional(),
+  "snapshots": zod.string().optional()
 })
 
 
@@ -100,7 +111,12 @@ export const GetSessionResponse = zod.object({
   "strengths": zod.array(zod.string()),
   "improvements": zod.array(zod.string()),
   "recommendations": zod.array(zod.string()),
-  "warnings": zod.array(zod.string())
+  "warnings": zod.array(zod.string()),
+  "coachFeedback": zod.string().optional(),
+  "injuryRisk": zod.string().optional(),
+  "trainingPlan": zod.string().optional(),
+  "progressReport": zod.string().optional(),
+  "snapshots": zod.string().optional()
 })
 
 
@@ -124,7 +140,12 @@ export const ListSessionsResponseItem = zod.object({
   "strengths": zod.array(zod.string()),
   "improvements": zod.array(zod.string()),
   "recommendations": zod.array(zod.string()),
-  "warnings": zod.array(zod.string())
+  "warnings": zod.array(zod.string()),
+  "coachFeedback": zod.string().optional(),
+  "injuryRisk": zod.string().optional(),
+  "trainingPlan": zod.string().optional(),
+  "progressReport": zod.string().optional(),
+  "snapshots": zod.string().optional()
 })
 export const ListSessionsResponse = zod.array(ListSessionsResponseItem)
 

@@ -84,6 +84,11 @@ export interface Session {
   dominantHand: SessionDominantHand;
   createdAt: string;
   status: SessionStatus;
+  coachFeedback?: string;
+  injuryRisk?: string;
+  trainingPlan?: string;
+  progressReport?: string;
+  snapshots?: string;
 }
 
 export interface SessionEndInput {
@@ -94,6 +99,7 @@ export interface SessionEndInput {
   avgEfficiencyScore: number;
   overallScore: number;
   warnings: string[];
+  snapshots?: string;
 }
 
 export type SessionSummaryAnalysisType = typeof SessionSummaryAnalysisType[keyof typeof SessionSummaryAnalysisType];
@@ -148,6 +154,11 @@ export interface SessionSummary {
   improvements: string[];
   recommendations: string[];
   warnings: string[];
+  coachFeedback?: string;
+  injuryRisk?: string;
+  trainingPlan?: string;
+  progressReport?: string;
+  snapshots?: string;
 }
 
 export interface ErrorResponse {

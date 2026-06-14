@@ -8,8 +8,24 @@ import { randomUUID } from "crypto";
 import { db } from "@workspace/db";
 import { sessionsTable } from "@workspace/db";
 import { logger } from "../lib/logger";
+import { runMultiAgentPipeline } from "../services/multiAgentEngine";
 
 const router = Router();
+
+// Dynamically determine the available Python command
+let cachedPythonCommand: string | null = null;
+function getPythonCommand(): string {
+  if (cachedPythonCommand) return cachedPythonCommand;
+  try {
+    const check = spawnSync("python3", ["--version"]);
+    if (!check.error && check.status === 0) {
+      cachedPythonCommand = "python3";
+      return "python3";
+    }
+  } catch (e) {}
+  cachedPythonCommand = "python";
+  return "python";
+}
 
 const uploadDir = path.join(os.tmpdir(), "kinectra-uploads");
 if (!fs.existsSync(uploadDir)) {
@@ -128,6 +144,19 @@ async function saveSessionResult(
     analysisType
   );
 
+  const agentReport = await runMultiAgentPipeline(sessionId, {
+    athleteName,
+    analysisType,
+    skillLevel,
+    dominantHand,
+    overallScore: analysis.overallScore,
+    avgPostureScore: analysis.avgPostureScore,
+    avgAlignmentScore: analysis.avgAlignmentScore,
+    avgStabilityScore: analysis.avgStabilityScore,
+    avgEfficiencyScore: analysis.avgEfficiencyScore,
+    warnings: analysis.warnings,
+  });
+
   try {
     await db.insert(sessionsTable).values({
       id: sessionId,
@@ -145,7 +174,12 @@ async function saveSessionResult(
       warnings: analysis.warnings,
       strengths,
       improvements,
-      recommendations
+      recommendations,
+      coachFeedback: agentReport.coachFeedback,
+      injuryRisk: agentReport.injuryRisk,
+      trainingPlan: agentReport.trainingPlan,
+      progressReport: agentReport.progressReport,
+      snapshots: null,
     });
 
     const job = jobs.get(jobId);
@@ -186,18 +220,42 @@ router.post("/video/upload", upload.single("video"), async (req, res): Promise<v
   }
 
   // Fast Subprocess check for duration using OpenCV in Python
+  const pythonCmd = getPythonCommand();
   const checkScript = `import cv2; cap=cv2.VideoCapture('${file.path.replace(/\\/g, "/")}'); fps=cap.get(cv2.CAP_PROP_FPS); fc=cap.get(cv2.CAP_PROP_FRAME_COUNT); print(fc/fps if fps > 0 else 0); cap.release()`;
   
   try {
-    const checkProcess = spawnSync("python", ["-c", checkScript], { encoding: "utf8" });
-    if (checkProcess.error) {
-      logger.error({ error: checkProcess.error }, "Failed to execute duration check");
+    const checkProcess = spawnSync(pythonCmd, ["-c", checkScript], { encoding: "utf8" });
+    
+    const status = checkProcess.status;
+    const stderr = checkProcess.stderr ? checkProcess.stderr.trim() : "";
+    const stdout = checkProcess.stdout ? checkProcess.stdout.trim() : "";
+
+    if (status !== 0 || checkProcess.error) {
+      const errorDetail = stderr || (checkProcess.error ? checkProcess.error.message : "Unknown error");
+      logger.error({ error: errorDetail, status, pythonCmd }, "Duration check subprocess failed");
       try { fs.unlinkSync(file.path); } catch (e) {}
-      res.status(400).json({ success: false, message: "Invalid video file (unable to read)" });
+      
+      const isMissingDep = 
+        errorDetail.includes("cv2") || 
+        errorDetail.includes("ModuleNotFoundError") || 
+        errorDetail.includes("ImportError") || 
+        (checkProcess.error && (checkProcess.error as any).code === "ENOENT");
+
+      if (isMissingDep) {
+        res.status(500).json({
+          success: false,
+          message: "Server environment error: Python or OpenCV (cv2) is not installed on the server."
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: "Invalid or corrupt video file (unable to read or process)"
+        });
+      }
       return;
     }
     
-    const duration = parseFloat(checkProcess.stdout.trim());
+    const duration = parseFloat(stdout);
     if (isNaN(duration) || duration <= 0) {
       try { fs.unlinkSync(file.path); } catch (e) {}
       res.status(400).json({ success: false, message: "Invalid or corrupt video file" });
@@ -228,7 +286,7 @@ router.post("/video/upload", upload.single("video"), async (req, res): Promise<v
 
   // Spawn processing job
   const pythonScriptPath = path.resolve(process.cwd(), "src", "services", "analyze_video.py");
-  const child = spawn("python", [
+  const child = spawn(pythonCmd, [
     pythonScriptPath,
     file.path,
     athleteName,

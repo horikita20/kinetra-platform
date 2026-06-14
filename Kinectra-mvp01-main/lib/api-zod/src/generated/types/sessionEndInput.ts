@@ -14,4 +14,5 @@ export interface SessionEndInput {
   avgEfficiencyScore: number;
   overallScore: number;
   warnings: string[];
+  snapshots?: string;
 }

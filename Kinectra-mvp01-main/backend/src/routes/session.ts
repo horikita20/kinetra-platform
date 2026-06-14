@@ -10,6 +10,7 @@ import {
   EndSessionParams,
   GetSessionParams,
 } from "@workspace/api-zod";
+import { runMultiAgentPipeline } from "../services/multiAgentEngine";
 
 const router = Router();
 
@@ -139,6 +140,7 @@ router.post("/session/:sessionId/end", async (req, res): Promise<void> => {
     avgEfficiencyScore,
     overallScore,
     warnings,
+    snapshots,
   } = bodyParsed.data;
 
   try {
@@ -158,6 +160,19 @@ router.post("/session/:sessionId/end", async (req, res): Promise<void> => {
       existing[0].analysisType
     );
 
+    const agentReport = await runMultiAgentPipeline(sessionId, {
+      athleteName: existing[0].athleteName,
+      analysisType: existing[0].analysisType,
+      skillLevel: existing[0].skillLevel,
+      dominantHand: existing[0].dominantHand,
+      overallScore,
+      avgPostureScore,
+      avgAlignmentScore,
+      avgStabilityScore,
+      avgEfficiencyScore,
+      warnings,
+    });
+
     await db
       .update(sessionsTable)
       .set({
@@ -172,6 +187,11 @@ router.post("/session/:sessionId/end", async (req, res): Promise<void> => {
         strengths,
         improvements,
         recommendations,
+        coachFeedback: agentReport.coachFeedback,
+        injuryRisk: agentReport.injuryRisk,
+        trainingPlan: agentReport.trainingPlan,
+        progressReport: agentReport.progressReport,
+        snapshots: snapshots || null,
       })
       .where(eq(sessionsTable.id, sessionId));
 

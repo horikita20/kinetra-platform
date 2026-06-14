@@ -28,4 +28,9 @@ export interface SessionSummary {
   improvements: string[];
   recommendations: string[];
   warnings: string[];
+  coachFeedback?: string;
+  injuryRisk?: string;
+  trainingPlan?: string;
+  progressReport?: string;
+  snapshots?: string;
 }

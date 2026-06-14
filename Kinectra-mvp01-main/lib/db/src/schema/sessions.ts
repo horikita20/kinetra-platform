@@ -19,6 +19,11 @@ export const sessionsTable = pgTable("sessions", {
   strengths: text("strengths").array().notNull().default([]),
   improvements: text("improvements").array().notNull().default([]),
   recommendations: text("recommendations").array().notNull().default([]),
+  coachFeedback: text("coach_feedback"),
+  injuryRisk: text("injury_risk"),
+  trainingPlan: text("training_plan"),
+  progressReport: text("progress_report"),
+  snapshots: text("snapshots"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -33,6 +38,11 @@ export const insertSessionSchema = createInsertSchema(sessionsTable).omit({
   strengths: true,
   improvements: true,
   recommendations: true,
+  coachFeedback: true,
+  injuryRisk: true,
+  trainingPlan: true,
+  progressReport: true,
+  snapshots: true,
   createdAt: true,
   status: true,
 });

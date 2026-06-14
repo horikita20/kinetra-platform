@@ -220,6 +220,16 @@ components:
         status:
           type: string
           enum: [active, completed]
+        coachFeedback:
+          type: string
+        injuryRisk:
+          type: string
+        trainingPlan:
+          type: string
+        progressReport:
+          type: string
+        snapshots:
+          type: string
 
     SessionEndInput:
       type: object
@@ -248,6 +258,8 @@ components:
           type: array
           items:
             type: string
+        snapshots:
+          type: string
 
     SessionSummary:
       type: object
@@ -316,6 +328,16 @@ components:
           type: array
           items:
             type: string
+        coachFeedback:
+          type: string
+        injuryRisk:
+          type: string
+        trainingPlan:
+          type: string
+        progressReport:
+          type: string
+        snapshots:
+          type: string
 
     ErrorResponse:
       type: object
