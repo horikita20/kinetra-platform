@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+onnxruntime
+onnxruntime-qnn
+opencv-python
+pyserial
+pydantic
+numpy
+websockets
+python-multipart

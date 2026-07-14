@@ -1,0 +1,406 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: KINETRA API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: session
+    description: Analysis session operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /session/start:
+    post:
+      operationId: startSession
+      tags: [session]
+      summary: Start an analysis session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SessionInput"
+      responses:
+        "201":
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+
+  /session/{sessionId}/end:
+    post:
+      operationId: endSession
+      tags: [session]
+      summary: End an analysis session and get summary
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SessionEndInput"
+      responses:
+        "200":
+          description: Session ended with summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionSummary"
+
+  /session/{sessionId}:
+    get:
+      operationId: getSession
+      tags: [session]
+      summary: Get session results
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Session results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionSummary"
+        "404":
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /session:
+    get:
+      operationId: listSessions
+      tags: [session]
+      summary: List recent sessions
+      responses:
+        "200":
+          description: List of sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SessionSummary"
+
+  /video/upload:
+    post:
+      operationId: uploadVideo
+      tags: [session]
+      summary: Upload sports video for analysis
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/UploadVideoInput"
+      responses:
+        "200":
+          description: Video uploaded and processing started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoUploadResponse"
+        "400":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoUploadResponse"
+
+  /video/job/{jobId}:
+    get:
+      operationId: getJobStatus
+      tags: [session]
+      summary: Get status of video processing job
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Processing job status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobStatus"
+        "404":
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    SessionInput:
+      type: object
+      required:
+        - athleteName
+        - analysisType
+        - skillLevel
+        - dominantHand
+      properties:
+        athleteName:
+          type: string
+        analysisType:
+          type: string
+          enum: [bowling, batting]
+        skillLevel:
+          type: string
+          enum: [beginner, intermediate, advanced, professional]
+        dominantHand:
+          type: string
+          enum: [right, left]
+
+    Session:
+      type: object
+      required:
+        - id
+        - athleteName
+        - analysisType
+        - skillLevel
+        - dominantHand
+        - createdAt
+        - status
+      properties:
+        id:
+          type: string
+        athleteName:
+          type: string
+        analysisType:
+          type: string
+          enum: [bowling, batting]
+        skillLevel:
+          type: string
+          enum: [beginner, intermediate, advanced, professional]
+        dominantHand:
+          type: string
+          enum: [right, left]
+        createdAt:
+          type: string
+        status:
+          type: string
+          enum: [active, completed]
+        coachFeedback:
+          type: string
+        injuryRisk:
+          type: string
+        trainingPlan:
+          type: string
+        progressReport:
+          type: string
+        snapshots:
+          type: string
+
+    SessionEndInput:
+      type: object
+      required:
+        - frameCount
+        - avgPostureScore
+        - avgAlignmentScore
+        - avgStabilityScore
+        - avgEfficiencyScore
+        - overallScore
+        - warnings
+      properties:
+        frameCount:
+          type: integer
+        avgPostureScore:
+          type: number
+        avgAlignmentScore:
+          type: number
+        avgStabilityScore:
+          type: number
+        avgEfficiencyScore:
+          type: number
+        overallScore:
+          type: number
+        warnings:
+          type: array
+          items:
+            type: string
+        snapshots:
+          type: string
+
+    SessionSummary:
+      type: object
+      required:
+        - id
+        - athleteName
+        - analysisType
+        - skillLevel
+        - dominantHand
+        - createdAt
+        - status
+        - frameCount
+        - avgPostureScore
+        - avgAlignmentScore
+        - avgStabilityScore
+        - avgEfficiencyScore
+        - overallScore
+        - strengths
+        - improvements
+        - recommendations
+        - warnings
+      properties:
+        id:
+          type: string
+        athleteName:
+          type: string
+        analysisType:
+          type: string
+          enum: [bowling, batting]
+        skillLevel:
+          type: string
+          enum: [beginner, intermediate, advanced, professional]
+        dominantHand:
+          type: string
+          enum: [right, left]
+        createdAt:
+          type: string
+        status:
+          type: string
+          enum: [active, completed]
+        frameCount:
+          type: integer
+        avgPostureScore:
+          type: number
+        avgAlignmentScore:
+          type: number
+        avgStabilityScore:
+          type: number
+        avgEfficiencyScore:
+          type: number
+        overallScore:
+          type: number
+        strengths:
+          type: array
+          items:
+            type: string
+        improvements:
+          type: array
+          items:
+            type: string
+        recommendations:
+          type: array
+          items:
+            type: string
+        warnings:
+          type: array
+          items:
+            type: string
+        coachFeedback:
+          type: string
+        injuryRisk:
+          type: string
+        trainingPlan:
+          type: string
+        progressReport:
+          type: string
+        snapshots:
+          type: string
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+
+    VideoUploadResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+        jobId:
+          type: string
+        message:
+          type: string
+
+    JobStatus:
+      type: object
+      required:
+        - jobId
+        - status
+        - progress
+        - step
+      properties:
+        jobId:
+          type: string
+        status:
+          type: string
+          enum: [pending, processing, completed, failed]
+        progress:
+          type: integer
+        step:
+          type: integer
+        message:
+          type: string
+        sessionId:
+          type: string
+
+    UploadVideoInput:
+      type: object
+      required:
+        - video
+        - athleteName
+        - analysisType
+        - skillLevel
+        - dominantHand
+      properties:
+        video:
+          type: string
+          format: binary
+        athleteName:
+          type: string
+        analysisType:
+          type: string
+          enum: [bowling, batting]
+        skillLevel:
+          type: string
+          enum: [beginner, intermediate, advanced, professional]
+        dominantHand:
+          type: string
+          enum: [right, left]

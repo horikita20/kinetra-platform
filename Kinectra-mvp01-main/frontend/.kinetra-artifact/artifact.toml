@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "KINETRA"
+version = "1.0.0"
+id = "artifacts/kinetra"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24564
+
+[services.development]
+run = "pnpm --filter @workspace/kinetra run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/kinetra", "run", "build" ]
+publicDir = "artifacts/kinetra/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24564"
+BASE_PATH = "/"
