@@ -1,7 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 
-const rawPort = process.env["PORT"] || "8080";
+const rawPort = process.env["PORT"] || "8000";
 
 const port = Number(rawPort);
 

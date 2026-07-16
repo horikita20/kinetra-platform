@@ -21,7 +21,7 @@ async def start_session(request: StartSessionRequest):
             skill_level=request.skillLevel,
             dominant_hand=request.dominantHand
         )
-        return SessionStartResponse(sessionId=session_id, status="active")
+        return SessionStartResponse(id=session_id, sessionId=session_id, status="active")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to start session: {e}")
 

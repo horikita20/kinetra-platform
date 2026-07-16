@@ -9,6 +9,7 @@ class StartSessionRequest(BaseModel):
     dominantHand: Optional[str] = Field("right", example="left")
 
 class SessionStartResponse(BaseModel):
+    id: str
     sessionId: str
     status: str
 

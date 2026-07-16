@@ -14,6 +14,7 @@ import {
   Info,
   Play,
   Volume2,
+  Mic,
   Trash2,
   Maximize2
 } from "lucide-react";
@@ -63,6 +64,9 @@ export default function Analysis() {
   const [transcript, setTranscript] = useState("Hello! I am Coach Aryan. Ready to begin your session?");
   const lastSpeechTimeRef = useRef<number>(0);
   const lastSnapshotTimeRef = useRef<number>(0);
+  const lastUpdateIntervalTimeRef = useRef<number>(0);
+  const rotationIndexRef = useRef<number>(0);
+  const lastActiveMessageRef = useRef<string>("");
 
   const [snapshots, setSnapshots] = useState<Array<{
     id: string;
@@ -249,58 +253,96 @@ export default function Analysis() {
     if (!hasCameraPermission || isModelLoading) return;
 
     const now = Date.now();
-    const canSpeak = now - lastSpeechTimeRef.current > 8000;
+    // Only update coaching advice and check speech every 3 seconds (3000ms)
+    if (now - lastUpdateIntervalTimeRef.current < 3000) return;
+
+    // Normalize shoulder alignment angle (tilt is 0-90, alignment is 180 - tilt)
+    const shoulderAngle = metrics.shoulderAlignment > 90 ? metrics.shoulderAlignment : 180 - metrics.shoulderAlignment;
+
+    const candidates = [
+      {
+        name: "elbow",
+        active: metrics.elbowAngle < 140 && metrics.elbowAngle > 0,
+        severity: (140 - metrics.elbowAngle) / 140,
+        msg: "Straighten your bowling arm",
+        label: "Elbow Drop",
+        correction: "Lock bowling elbow, aim high next to your ear."
+      },
+      {
+        name: "knee",
+        active: metrics.kneeAngle > 50,
+        severity: (metrics.kneeAngle - 50) / 50,
+        msg: "Drive your knee higher",
+        label: "Knee Over-Bend",
+        correction: "Straighten lead knee slightly to firm up foundation."
+      },
+      {
+        name: "spine",
+        active: metrics.spineTilt > 25,
+        severity: (metrics.spineTilt - 25) / 25,
+        msg: "Keep your spine upright",
+        label: "Spine Tilt",
+        correction: "Engage core muscles to prevent leaning sideways."
+      },
+      {
+        name: "shoulder",
+        active: shoulderAngle < 160 && shoulderAngle > 0,
+        severity: (160 - shoulderAngle) / 160,
+        msg: "Align your shoulders",
+        label: "Shoulder Rotation",
+        correction: "Hold non-bowling shoulder aligned with target."
+      },
+      {
+        name: "balance",
+        active: metrics.balanceScore < 70 && metrics.balanceScore > 0,
+        severity: (70 - metrics.balanceScore) / 70,
+        msg: "Shift weight to front foot",
+        label: "Balance Unstable",
+        correction: "Focus on stable landing mechanics and plant front foot."
+      }
+    ];
+
+    const activeDeviations = candidates.filter(c => c.active);
+    
+    // Sort active deviations by severity descending (worst joint first)
+    activeDeviations.sort((a, b) => b.severity - a.severity);
+
+    let targetAdvice = "Excellent technique, keep it up!";
+    let isWarning = false;
+    let worstJoint = null;
+
+    if (activeDeviations.length > 0) {
+      isWarning = true;
+      const idx = rotationIndexRef.current % activeDeviations.length;
+      worstJoint = activeDeviations[idx];
+      targetAdvice = worstJoint.msg;
+      rotationIndexRef.current = (rotationIndexRef.current + 1) % activeDeviations.length;
+    } else {
+      rotationIndexRef.current = 0;
+    }
+
+    setTranscript(targetAdvice);
+
+    // Speak only when the advice changes to avoid self-interruptions
+    if (targetAdvice !== lastActiveMessageRef.current) {
+      speak(targetAdvice);
+      lastActiveMessageRef.current = targetAdvice;
+    }
+
+    // Trigger auto-snapshots at standard frequency
     const canSnapshot = now - lastSnapshotTimeRef.current > 5000;
-
-    if (metrics.warnings.length > 0) {
-      const primaryWarning = metrics.warnings[0];
-      let advice = "";
-      let label = "Form Deviation";
-      let correction = "Adjust posture to match target biomechanics.";
-
-      if (primaryWarning.includes("Elbow angle too low") || (metrics.elbowAngle < 160 && config.analysisType === "bowling")) {
-        advice = "Elbow is dropping. Keep it at 160 degrees or above at release.";
-        label = "Elbow Drop";
-        correction = "Lock bowling elbow, aim high next to your ear.";
-      } else if (primaryWarning.includes("Excessive spine tilt")) {
-        advice = "Excessive spine tilt. Keep your upper body upright.";
-        label = "Spine Tilt";
-        correction = "Engage core muscles to prevent leaning sideways.";
-      } else if (primaryWarning.includes("Poor shoulder rotation")) {
-        advice = "Poor shoulder rotation. Explode through the crease.";
-        label = "Shoulder Rotation";
-        correction = "Hold non-bowling shoulder aligned with target.";
-      } else if (primaryWarning.includes("Front knee bent too much")) {
-        advice = "Front knee bent too much. Stand taller for stability.";
-        label = "Knee Over-Bend";
-        correction = "Straighten lead knee slightly to firm up foundation.";
-      } else if (primaryWarning.includes("Low bat lift")) {
-        advice = "Low bat lift. Raise bat backlift higher.";
-        label = "Low Bat Lift";
-        correction = "Lift bat to shoulder level on stance pre-delivery.";
-      }
-
-      if (advice) {
-        if (canSpeak) {
-          speak(advice);
-          lastSpeechTimeRef.current = now;
-        }
-        if (canSnapshot) {
-          captureSnapshot("mistake", label, correction, metrics.techniqueScore);
-          lastSnapshotTimeRef.current = now;
-        }
-      }
-    } else if (metrics.techniqueScore >= 95) {
-      if (canSpeak) {
-        speak("Textbook form! That is perfect delivery. Keep it up.");
-        lastSpeechTimeRef.current = now;
-      }
-      if (canSnapshot) {
+    if (canSnapshot) {
+      if (isWarning && worstJoint) {
+        captureSnapshot("mistake", worstJoint.label, worstJoint.correction, metrics.techniqueScore);
+        lastSnapshotTimeRef.current = now;
+      } else if (!isWarning && metrics.techniqueScore >= 95) {
         captureSnapshot("perfect", "Perfect Form", "Excellent alignment and balance.", metrics.techniqueScore);
         lastSnapshotTimeRef.current = now;
       }
     }
-  }, [hasCameraPermission, isModelLoading, metrics, speak, captureSnapshot, config.analysisType]);
+
+    lastUpdateIntervalTimeRef.current = now;
+  }, [hasCameraPermission, isModelLoading, metrics, speak, captureSnapshot]);
 
   // ───────────────── RECORDING PIPELINE ─────────────────
   const startRecording = useCallback(() => {
@@ -414,7 +456,7 @@ export default function Analysis() {
   };
 
   return (
-    <div className="h-screen w-full flex flex-col bg-gray-950 font-sans text-gray-100 overflow-hidden">
+    <div className="h-screen w-full flex flex-col bg-gray-950 font-sans text-gray-100 overflow-y-auto md:overflow-hidden relative pb-20 md:pb-0">
       
       {/* HEADER SECTION */}
       <header className="h-16 border-b border-white/5 bg-gray-900/60 backdrop-blur-md px-6 flex items-center justify-between z-10 shrink-0">
@@ -455,11 +497,29 @@ export default function Analysis() {
         </Button>
       </header>
 
-      {/* WORKSPACE AREA (SPLIT SCREEN VIEW) */}
-      <div className="flex-1 flex flex-col md:flex-row min-h-0 relative">
+      {/* WORKSPACE AREA */}
+      <div className="flex-1 flex flex-col min-h-0 relative w-full">
         
-        {/* LEFT PANEL: Webcam Feed with Pose Skeleton overlay */}
-        <div className="flex-1 md:w-1/2 border-r border-white/5 bg-gray-950 p-5 flex flex-col justify-between min-h-0">
+        {/* SCORE CARD (Mobile Only) */}
+        <div className="flex md:hidden items-center justify-between px-4 py-2.5 mx-4 mt-3 bg-gray-900 border border-white/5 rounded-xl shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-gray-400 font-bold tracking-wider uppercase">Form Score</span>
+            <span className="text-sm font-bold font-mono text-emerald-500">{metrics.techniqueScore}/100</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-gray-400 font-bold tracking-wider uppercase">Injury Risk</span>
+            <span className={`text-[10px] font-bold font-mono py-0.5 px-2 rounded-md ${
+              metrics.techniqueScore < 60 ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 
+              metrics.techniqueScore < 80 ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' : 
+              'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+            }`}>
+              {metrics.techniqueScore < 60 ? 'HIGH' : metrics.techniqueScore < 80 ? 'MEDIUM' : 'LOW'}
+            </span>
+          </div>
+        </div>
+
+        {/* Webcam Feed with Pose Skeleton overlay */}
+        <div className="w-full bg-gray-950 p-4 md:p-5 flex flex-col justify-between min-h-0">
           <div className="flex items-center justify-between mb-3 shrink-0">
             <span className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
               <Camera className="h-3.5 w-3.5 text-primary" /> Live Player Feed
@@ -472,7 +532,7 @@ export default function Analysis() {
             )}
           </div>
 
-          <div className="flex-1 min-h-0 w-full relative rounded-xl overflow-hidden border border-white/10 bg-black flex items-center justify-center shadow-lg">
+          <div className="h-[50vh] md:h-[70vh] min-h-[50vh] md:min-h-[70vh] max-h-[50vh] md:max-h-[70vh] shrink-0 w-full relative rounded-xl overflow-hidden border border-white/10 bg-black flex items-center justify-center shadow-lg">
             <video
               ref={videoRef}
               playsInline
@@ -510,76 +570,63 @@ export default function Analysis() {
           </div>
         </div>
 
-        {/* RIGHT PANEL: AI Coach Avatar face screen */}
-        <div className="flex-1 md:w-1/2 bg-gray-900/30 p-5 flex flex-col justify-between min-h-0 border-l border-white/5">
-          <div className="flex items-center justify-between mb-3 shrink-0">
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-              <Activity className="h-3.5 w-3.5 text-primary" /> AI Coach Avatar
-            </span>
-            <span className="text-[10px] font-mono text-gray-400">
-              COACH ARYAN (ACTIVE)
-            </span>
-          </div>
-
-          {/* Coach Face Display Box */}
-          <div className={`flex-1 flex flex-col items-center justify-center p-6 rounded-xl border transition-all duration-300 relative overflow-hidden bg-gray-950/50 ${
-            isSpeaking ? "border-red-500/50 shadow-lg shadow-red-950/10" : "border-white/10"
-          }`}>
-            
-            {/* Blinkingcap SVG Coach Face */}
-            <div className="relative w-44 h-44 mb-6 z-10">
-              <div className={`absolute inset-0 rounded-full blur-2xl opacity-10 transition-all duration-300 ${
-                isSpeaking ? "bg-red-500 scale-110" : "bg-primary scale-100"
-              }`} />
-              
-              <svg viewBox="0 0 200 200" className="w-full h-full drop-shadow-lg">
-                <path d="M 60,165 Q 100,195 140,165" fill="none" stroke="#F28C28" strokeWidth="6" strokeLinecap="round" />
-                <rect x="85" y="125" width="30" height="35" rx="5" fill="#FFE5C2" />
-                
-                <circle cx="100" cy="90" r="45" fill="#FFE5C2" stroke="#1F2937" strokeWidth="2" />
-                
-                <path d="M 54,85 C 50,50 150,50 146,85" fill="#1F2937" />
-                <path d="M 50,75 Q 100,60 150,75" fill="#F28C28" stroke="#F28C28" strokeWidth="2" />
-                
-                {/* Sports Sunglasses */}
-                <rect x="65" y="76" width="32" height="15" rx="6" fill="#111827" stroke="#F28C28" strokeWidth="2" />
-                <rect x="103" y="76" width="32" height="15" rx="6" fill="#111827" stroke="#F28C28" strokeWidth="2" />
-                <line x1="97" y1="83" x2="103" y2="83" stroke="#F28C28" strokeWidth="3" />
-                
-                <path d="M 100,92 Q 103,100 100,105" fill="none" stroke="#D1D5DB" strokeWidth="2" strokeLinecap="round" />
-                
-                {/* Talking mouth animation */}
-                {isSpeaking ? (
-                  <ellipse cx="100" cy="118" rx="11" ry="7" fill="#111827" stroke="#F28C28" strokeWidth="2" className="animate-pulse" />
-                ) : (
-                  <path d="M 88,118 Q 100,126 112,118" fill="none" stroke="#1F2937" strokeWidth="3" strokeLinecap="round" />
-                )}
-                
-                <circle cx="68" cy="105" r="4" fill="#F87171" opacity="0.4" />
-                <circle cx="132" cy="105" r="4" fill="#F87171" opacity="0.4" />
-              </svg>
-            </div>
-
-            {/* AI Coach Text Transcript bubble */}
-            <div className="w-full bg-white/5 border border-white/5 rounded-xl p-4 flex gap-3 items-center z-10 min-h-[70px]">
-              <div className={`p-2 rounded-full shrink-0 ${isSpeaking ? 'bg-red-500/10 text-red-500' : 'bg-primary/10 text-primary'}`}>
-                <Volume2 className={`h-5 w-5 ${isSpeaking ? 'animate-bounce' : ''}`} />
-              </div>
-              <p className="text-xs text-gray-200 italic leading-relaxed">
-                "{transcript}"
-              </p>
+        {/* MOBILE BIOMECHANICS STATS & CONTROLS */}
+        <div className="flex md:hidden flex-col gap-4 px-4 py-3 bg-gray-900/60 border-t border-white/5">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-white/3 border border-white/5 rounded-xl p-2.5 flex flex-col justify-between">
+              <span className="text-[10px] text-gray-400 font-bold tracking-wider uppercase">Elbow Angle</span>
+              <div className="text-xs font-bold font-mono text-primary mt-1" style={{ fontSize: '12px' }}>{metrics.elbowAngle}°</div>
             </div>
             
+            <div className="bg-white/3 border border-white/5 rounded-xl p-2.5 flex flex-col justify-between">
+              <span className="text-[10px] text-gray-400 font-bold tracking-wider uppercase">Knee Angle</span>
+              <div className="text-xs font-bold font-mono text-gray-200 mt-1" style={{ fontSize: '12px' }}>{metrics.kneeAngle}°</div>
+            </div>
+
+            <div className="bg-white/3 border border-white/5 rounded-xl p-2.5 flex flex-col justify-between">
+              <span className="text-[10px] text-gray-400 font-bold tracking-wider uppercase">Spine Tilt</span>
+              <div className="text-xs font-bold font-mono text-gray-200 mt-1" style={{ fontSize: '12px' }}>{metrics.spineTilt}°</div>
+            </div>
+
+            <div className="bg-white/3 border border-white/5 rounded-xl p-2.5 flex flex-col justify-between">
+              <span className="text-[10px] text-gray-400 font-bold tracking-wider uppercase">Balance Score</span>
+              <div className="text-xs font-bold font-mono text-gray-200 mt-1" style={{ fontSize: '12px' }}>{metrics.balanceScore}%</div>
+            </div>
           </div>
-          <div className="mt-2 text-[10px] font-mono text-gray-500 uppercase tracking-wider shrink-0 text-center">
-            Avatar animated dynamically in sync with Text-to-Speech instructions.
+
+          <div className="flex flex-col gap-2">
+            {!isRecording ? (
+              <Button 
+                onClick={startRecording}
+                className="bg-red-500 text-white font-semibold flex items-center justify-center gap-2 hover:bg-red-600 shadow-md shadow-red-950/20 w-full"
+              >
+                <span className="w-2.5 h-2.5 rounded-full bg-white animate-pulse" />
+                Record Session
+              </Button>
+            ) : (
+              <Button 
+                onClick={stopRecording}
+                className="bg-gray-800 border border-white/10 text-white font-semibold flex items-center justify-center gap-2 hover:bg-gray-700 w-full"
+              >
+                <StopCircle className="h-4 w-4 text-red-500" />
+                Stop Recording
+              </Button>
+            )}
+
+            <Button 
+              onClick={handleEndSession}
+              variant="outline"
+              className="font-semibold w-full"
+            >
+              <BarChart2 className="h-4 w-4 mr-2" /> View Analysis Report
+            </Button>
           </div>
         </div>
 
       </div>
 
-      {/* METRICS PANEL & ACTION BUTTONS */}
-      <div className="h-44 border-t border-white/5 bg-gray-900/60 p-4 flex gap-6 shrink-0 z-10">
+      {/* METRICS PANEL & ACTION BUTTONS (Desktop Only) */}
+      <div className="hidden md:flex h-44 border-t border-white/5 bg-gray-900/60 p-4 gap-6 shrink-0 z-10">
         
         {/* Core Metrics panel widgets */}
         <div className="flex-1 grid grid-cols-6 gap-3 items-center">
@@ -680,6 +727,30 @@ export default function Analysis() {
               Autonomous snapshots will populate here when form deviations or perfect deliveries occur.
             </div>
           )}
+        </div>
+      </div>
+
+      {/* AI COACH COMPACT BAR */}
+      <div className="fixed bottom-4 left-4 right-4 z-50 flex items-center justify-between bg-gray-950/95 backdrop-blur-md border border-orange-500/30 rounded-full px-4 md:px-6 shadow-[0_0_15px_rgba(249,115,22,0.2)] transition-all duration-300" style={{ height: '56px' }}>
+        {/* Left side: small animated orange mic/sound icon that pulses when speaking */}
+        <div className="flex items-center justify-center shrink-0">
+          <div className={`p-2 rounded-full text-orange-500 ${isSpeaking ? 'animate-pulse scale-110' : ''}`}>
+            <Mic className="h-4 w-4" />
+          </div>
+        </div>
+
+        {/* Center: coach feedback text (single line, truncate if too long) */}
+        <div className="flex-1 min-w-0 px-3 md:px-4 text-center">
+          <p className="text-xs md:text-sm font-medium text-gray-200 truncate whitespace-nowrap">
+            {transcript}
+          </p>
+        </div>
+
+        {/* Right side: small "COACH" label in orange */}
+        <div className="shrink-0 flex items-center">
+          <span className="text-[10px] md:text-xs font-bold text-orange-500 tracking-wider uppercase font-mono">
+            COACH
+          </span>
         </div>
       </div>
 
