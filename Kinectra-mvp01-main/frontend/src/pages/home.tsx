@@ -16,6 +16,7 @@ import {
 import { Navbar } from "@/components/layout/navbar";
 import { Button } from "@/components/ui/button";
 import { KinectraLogo } from "@/components/layout/KinectraLogo";
+import { CricketAnimation } from "@/components/animation/CricketAnimation";
 
 // ─── Animated cricket pose landmarks ──────────────────────────────
 const JOINTS = [
@@ -154,7 +155,8 @@ function FadeIn({ children, delay = 0, className = "" }: { children: React.React
 // ─── Home page ─────────────────────────────────────────────────────
 export default function Home() {
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-background relative">
+      <CricketAnimation />
       <Navbar />
 
       <main className="flex-1">

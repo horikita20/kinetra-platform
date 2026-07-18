@@ -22,7 +22,7 @@ export const HealthCheckResponse = zod.object({
  */
 export const StartSessionBody = zod.object({
   "athleteName": zod.string(),
-  "analysisType": zod.enum(['bowling', 'batting']),
+  "analysisType": zod.enum(['bowling', 'batting', 'shooting', 'urdhva_hastasana']),
   "skillLevel": zod.enum(['beginner', 'intermediate', 'advanced', 'professional']),
   "dominantHand": zod.enum(['right', 'left'])
 })
@@ -30,7 +30,7 @@ export const StartSessionBody = zod.object({
 export const StartSessionResponse = zod.object({
   "id": zod.string(),
   "athleteName": zod.string(),
-  "analysisType": zod.enum(['bowling', 'batting']),
+  "analysisType": zod.enum(['bowling', 'batting', 'shooting', 'urdhva_hastasana']),
   "skillLevel": zod.enum(['beginner', 'intermediate', 'advanced', 'professional']),
   "dominantHand": zod.enum(['right', 'left']),
   "createdAt": zod.string(),
@@ -64,7 +64,7 @@ export const EndSessionBody = zod.object({
 export const EndSessionResponse = zod.object({
   "id": zod.string(),
   "athleteName": zod.string(),
-  "analysisType": zod.enum(['bowling', 'batting']),
+  "analysisType": zod.enum(['bowling', 'batting', 'shooting', 'urdhva_hastasana']),
   "skillLevel": zod.enum(['beginner', 'intermediate', 'advanced', 'professional']),
   "dominantHand": zod.enum(['right', 'left']),
   "createdAt": zod.string(),
@@ -97,7 +97,7 @@ export const GetSessionParams = zod.object({
 export const GetSessionResponse = zod.object({
   "id": zod.string(),
   "athleteName": zod.string(),
-  "analysisType": zod.enum(['bowling', 'batting']),
+  "analysisType": zod.enum(['bowling', 'batting', 'shooting', 'urdhva_hastasana']),
   "skillLevel": zod.enum(['beginner', 'intermediate', 'advanced', 'professional']),
   "dominantHand": zod.enum(['right', 'left']),
   "createdAt": zod.string(),
@@ -126,7 +126,7 @@ export const GetSessionResponse = zod.object({
 export const ListSessionsResponseItem = zod.object({
   "id": zod.string(),
   "athleteName": zod.string(),
-  "analysisType": zod.enum(['bowling', 'batting']),
+  "analysisType": zod.enum(['bowling', 'batting', 'shooting', 'urdhva_hastasana']),
   "skillLevel": zod.enum(['beginner', 'intermediate', 'advanced', 'professional']),
   "dominantHand": zod.enum(['right', 'left']),
   "createdAt": zod.string(),
@@ -156,7 +156,7 @@ export const ListSessionsResponse = zod.array(ListSessionsResponseItem)
 export const UploadVideoBody = zod.object({
   "video": zod.instanceof(File),
   "athleteName": zod.string(),
-  "analysisType": zod.enum(['bowling', 'batting']),
+  "analysisType": zod.enum(['bowling', 'batting', 'shooting', 'urdhva_hastasana']),
   "skillLevel": zod.enum(['beginner', 'intermediate', 'advanced', 'professional']),
   "dominantHand": zod.enum(['right', 'left'])
 })

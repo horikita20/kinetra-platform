@@ -107,7 +107,7 @@ export async function runMultiAgentPipeline(
         duration: "15 minutes"
       });
     }
-  } else { // Batting
+  } else if (analysisType === "batting") {
     if (warnings.includes("Head moving excessively")) {
       coachErrors.push("Unstable head positioning at ball release");
       coachInstructions.push("Ensure your eyes are level and your head remains steady. Lead with your head towards the line of the ball.");
@@ -144,12 +144,90 @@ export async function runMultiAgentPipeline(
         duration: "15 minutes"
       });
     }
+  } else if (analysisType === "shooting") {
+    if (warnings.includes("Incomplete follow-through")) {
+      coachErrors.push("Arm follow-through stops prematurely");
+      coachInstructions.push("Snap your wrist down at the release point and keep your elbow fully extended overhead.");
+      coachDrills.push({
+        name: "Follow-through Holds",
+        description: "Shoot 15 free throws. Focus on holding your arm extension and wrist snap for 3 full seconds after release.",
+        duration: "12 minutes"
+      });
+    }
+    if (warnings.includes("Lean during jump shot")) {
+      coachErrors.push("Lateral or forward spine leaning during jump");
+      coachInstructions.push("Keep your shoulders square and engage your core. Jump vertically without drifting.");
+      coachDrills.push({
+        name: "Vertical Line Jumps",
+        description: "Practice jumping straight up from a line on the court. Ensure you land on the exact same line.",
+        duration: "8 minutes"
+      });
+    }
+    if (warnings.includes("Excessive knee bend")) {
+      coachErrors.push("Deep knee dip slowing down the shot release");
+      coachInstructions.push("Optimize your loading phase with a quick, springy leg compression rather than sinking too deep.");
+      coachDrills.push({
+        name: "Quick Pocket Springs",
+        description: "Practice receiving a pass and quickly springing up into a jump shot position with minimal knee dip time.",
+        duration: "10 minutes"
+      });
+    }
+
+    if (coachErrors.length === 0) {
+      coachInstructions.push("Outstanding jump shot mechanics. Work on speeding up catch-and-shoot execution.");
+      coachDrills.push({
+        name: "Around the Horn",
+        description: "Take 5 jump shots from 5 different spots on the court, focusing on maintaining identical technique.",
+        duration: "15 minutes"
+      });
+    }
+  } else if (analysisType === "urdhva_hastasana") {
+    if (warnings.includes("Raise arms fully overhead")) {
+      coachErrors.push("Shoulder flexion is restricted overhead");
+      coachInstructions.push("Reach active fingers up. Rotate your outer shoulders forward to broaden the back.");
+      coachDrills.push({
+        name: "Wall Chest Openers",
+        description: "Stand 1 foot from a wall. Reach hands high up on the wall, sinking your chest slightly forward to open shoulders.",
+        duration: "8 minutes"
+      });
+    }
+    if (warnings.includes("Straighten your elbows")) {
+      coachErrors.push("Elbow bending detected in overhead hold");
+      coachInstructions.push("Squeeze your triceps and rotate your forearms slightly inward to lock your elbow joints.");
+      coachDrills.push({
+        name: "Block-Squeeze Reaches",
+        description: "Hold a yoga block between your palms overhead. Press inward continuously to engage triceps and elbows.",
+        duration: "10 minutes"
+      });
+    }
+    if (warnings.includes("Straighten your spine / torso")) {
+      coachErrors.push("Lower back hyper-extension or torso tilt");
+      coachInstructions.push("Draw your ribcage in and scoop your tailbone down to maintain a straight vertical column.");
+      coachDrills.push({
+        name: "Tadasana Spine Alignment",
+        description: "Stand flat against a wall, pressing heels, glutes, and head. Slide hands behind your back to check core engagement.",
+        duration: "10 minutes"
+      });
+    }
+
+    if (coachErrors.length === 0) {
+      coachInstructions.push("Perfect vertical alignment and balance. Deepen your breathing tempo.");
+      coachDrills.push({
+        name: "Extended Hold Balance",
+        description: "Hold Urdhva Hastasana for 1 minute while maintaining absolute vertical spine alignment.",
+        duration: "5 minutes"
+      });
+    }
   }
+
+  let sportName = "cricket";
+  if (analysisType === "shooting") sportName = "basketball";
+  else if (analysisType === "urdhva_hastasana") sportName = "yoga";
 
   const coachJSON = {
     analysis: coachErrors.length > 0 
-      ? `Detected ${coachErrors.length} technical deviation(s) in your cricket ${analysisType} technique. Correcting these form errors will boost performance and overall consistency.`
-      : `Outstanding form! Your cricket ${analysisType} technique matches standard benchmarks closely.`,
+      ? `Detected ${coachErrors.length} technical deviation(s) in your ${sportName} ${analysisType === "urdhva_hastasana" ? "pose" : "technique"}. Correcting these form errors will boost performance and overall consistency.`
+      : `Outstanding form! Your ${sportName} ${analysisType === "urdhva_hastasana" ? "pose" : "technique"} matches standard benchmarks closely.`,
     errors: coachErrors,
     instructions: coachInstructions,
     drills: coachDrills
@@ -230,18 +308,21 @@ export async function runMultiAgentPipeline(
       { day: "Day 1", focus: "Rest & Active Recovery", activities: ["Dynamic full-body stretching", "Foam rolling (quads, hamstrings, back)", "Light 15-min walk"] },
       { day: "Day 2", focus: "Core & Joint Stability", activities: ["Planks (3x45s), Side planks (3x30s)", "Glute bridges (3x15)", "Single-leg balance holds (5 mins)"] },
       { day: "Day 3", focus: "Mobility & Technical Drills", activities: [
-        analysisType === "bowling" ? "Wall shadow bowling (no ball) - 3 sets of 15 reps" : "Tennis ball drop drives - 3 sets of 10 reps",
-        "Hip opening mobility flow (15 mins)"
+        analysisType === "bowling" ? "Wall shadow bowling (no ball) - 3 sets of 15 reps" :
+        analysisType === "batting" ? "Tennis ball drop drives - 3 sets of 10 reps" :
+        analysisType === "shooting" ? "Follow-through holds - 15 shots" :
+        "Wall Chest Openers - 5 sets of 5 deep breaths",
+        "Targeted joint mobility flow (15 mins)"
       ] },
       { day: "Day 4", focus: "Strength & Flexibility", activities: ["Bodyweight squats (3x15)", "Spinal rotations", "Hamstring stretches (3x30s)"] },
       { day: "Day 5", focus: "Low-Intensity Form Session", activities: [
-        `20-minute light ${analysisType} session, prioritizing correct posture over speed/power`,
+        `20-minute light ${analysisType} session, prioritizing correct posture over intensity`,
         "Immediate post-workout ice pack and stretch"
       ] }
     ];
   } else {
     schedule = [
-      { day: "Day 1", focus: "Mobility & Baseline Stance", activities: ["Spine rotations & arm circles (10 mins)", "Batting/Bowling stance alignment review in mirror (10 mins)", "Plank core holds (3x60s)"] },
+      { day: "Day 1", focus: "Mobility & Baseline Stance", activities: ["Spine rotations & arm circles (10 mins)", "Stance/Alignment review in mirror (10 mins)", "Plank core holds (3x60s)"] },
       { day: "Day 2", focus: "Targeted Technical Drills", activities: [
         ...(coachDrills.map(d => `${d.name} (${d.duration}): ${d.description}`)),
         "Video review of target positions"
@@ -256,7 +337,12 @@ export async function runMultiAgentPipeline(
   }
 
   const plannerJSON = {
-    title: `${skillLevel.toUpperCase()} Weekly Training Plan - ${analysisType === "bowling" ? "Bowling Form Focus" : "Batting Base Focus"}`,
+    title: `${skillLevel.toUpperCase()} Weekly Training Plan - ${
+      analysisType === "bowling" ? "Bowling Form Focus" : 
+      analysisType === "batting" ? "Batting Base Focus" :
+      analysisType === "shooting" ? "Shooting Release Focus" :
+      "Vertical Spine Alignment Focus"
+    }`,
     schedule
   };
   const trainingPlan = JSON.stringify(plannerJSON);

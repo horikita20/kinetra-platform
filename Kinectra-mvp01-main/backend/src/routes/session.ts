@@ -47,7 +47,7 @@ function generateRecommendations(
       strengths.push("Excellent overall bowling technique");
       recommendations.push("Continue drilling at current tempo for consistency.");
     }
-  } else {
+  } else if (analysisType === "batting") {
     if (!warningSet.has("Head moving excessively")) {
       strengths.push("Stable head position");
     } else {
@@ -69,6 +69,52 @@ function generateRecommendations(
     if (warnings.length === 0) {
       strengths.push("Solid batting stance and technique");
       recommendations.push("Practice footwork drills to further enhance timing.");
+    }
+  } else if (analysisType === "shooting") {
+    if (!warningSet.has("Incomplete follow-through")) {
+      strengths.push("High release point and complete follow-through extension");
+    } else {
+      improvements.push("Incomplete follow-through arm extension");
+      recommendations.push("Extend your shooting arm fully at the release point and snap your wrist.");
+    }
+    if (!warningSet.has("Lean during jump shot")) {
+      strengths.push("Stable vertical torso alignment");
+    } else {
+      improvements.push("Body leans laterally or forward during jump");
+      recommendations.push("Maintain a straight vertical trunk during release for shot stability.");
+    }
+    if (!warningSet.has("Excessive knee bend")) {
+      strengths.push("Good quick knee compression spring");
+    } else {
+      improvements.push("Deep knee dip slowing down release");
+      recommendations.push("Avoid sinking too low during loading — use a quick, explosive spring drive.");
+    }
+    if (warnings.length === 0) {
+      strengths.push("Elite jump shot form and stability");
+      recommendations.push("Keep practicing your shot pocket and catch-and-shoot transition.");
+    }
+  } else if (analysisType === "urdhva_hastasana") {
+    if (!warningSet.has("Raise arms fully overhead")) {
+      strengths.push("Excellent overhead arm reach and shoulder flex");
+    } else {
+      improvements.push("Shoulders not fully extended vertically");
+      recommendations.push("Reach active fingers straight up towards the ceiling, opening the armpits.");
+    }
+    if (!warningSet.has("Straighten your elbows")) {
+      strengths.push("Elbow joints locked straight and firm");
+    } else {
+      improvements.push("Bending elbow joints detected");
+      recommendations.push("Squeeze your forearms parallel and engage triceps to straighten your arms.");
+    }
+    if (!warningSet.has("Straighten your spine / torso")) {
+      strengths.push("Excellent tall vertical spinal posture");
+    } else {
+      improvements.push("Excessive spinal tilt / arched lower back");
+      recommendations.push("Tuck your tailbone and draw navel in to lengthen the lower spine.");
+    }
+    if (warnings.length === 0) {
+      strengths.push("Perfect Urdhva Hastasana alignment and core balance");
+      recommendations.push("Hold the posture for 5 breaths while breathing deeply through the nose.");
     }
   }
 

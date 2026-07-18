@@ -22,6 +22,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 import { Navbar } from "@/components/layout/navbar";
 import { Button } from "@/components/ui/button";
+import { CricketAnimation } from "@/components/animation/CricketAnimation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -451,7 +452,8 @@ export default function Results() {
     : "";
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-background relative">
+      <CricketAnimation />
       <Navbar />
       
       <main className="flex-1 container px-4 py-8 md:py-12 max-w-5xl mx-auto">

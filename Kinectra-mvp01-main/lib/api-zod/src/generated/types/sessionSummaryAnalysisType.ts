@@ -12,4 +12,6 @@ export type SessionSummaryAnalysisType = typeof SessionSummaryAnalysisType[keyof
 export const SessionSummaryAnalysisType = {
   bowling: 'bowling',
   batting: 'batting',
+  shooting: 'shooting',
+  urdhva_hastasana: 'urdhva_hastasana',
 } as const;

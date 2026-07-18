@@ -1,23 +1,13 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { PoseLandmarker, FilesetResolver, DrawingUtils } from "@mediapipe/tasks-vision";
 import { SessionInputAnalysisType } from "@workspace/api-client-react";
-
-interface Vector3D {
-  x: number;
-  y: number;
-  z: number;
-}
-
-export interface KinetraMetrics {
-  elbowAngle: number;
-  kneeAngle: number;
-  shoulderAlignment: number;
-  spineTilt: number;
-  headStability: number;
-  balanceScore: number;
-  techniqueScore: number;
-  warnings: string[];
-}
+import { useSessionContext } from "@/contexts/SessionContext";
+import { 
+  KinetraMetrics, 
+  DEFAULT_METRICS, 
+  evaluatePose 
+} from "@/utils/pose-evaluator";
+import { arduinoHardware } from "@/utils/hardware-placeholder";
 
 export interface KinetraAnalysisResult {
   isModelLoading: boolean;
@@ -27,31 +17,9 @@ export interface KinetraAnalysisResult {
   stopAnalysis: () => void;
 }
 
-const DEFAULT_METRICS: KinetraMetrics = {
-  elbowAngle: 0,
-  kneeAngle: 0,
-  shoulderAlignment: 0,
-  spineTilt: 0,
-  headStability: 100,
-  balanceScore: 100,
-  techniqueScore: 100,
-  warnings: [],
-};
-
 // Singleton cache for the PoseLandmarker to prevent multi-instance / re-creation crash
 let sharedPoseLandmarker: PoseLandmarker | null = null;
 let sharedPoseLandmarkerPromise: Promise<PoseLandmarker> | null = null;
-
-function calculateAngle(a: Vector3D, b: Vector3D, c: Vector3D): number {
-  const v1 = { x: a.x - b.x, y: a.y - b.y, z: a.z - b.z };
-  const v2 = { x: c.x - b.x, y: c.y - b.y, z: c.z - b.z };
-  const dot = v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
-  const mag1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y + v1.z * v1.z);
-  const mag2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y + v2.z * v2.z);
-  if (mag1 === 0 || mag2 === 0) return 0;
-  const clamped = Math.max(-1, Math.min(1, dot / (mag1 * mag2)));
-  return (Math.acos(clamped) * 180.0) / Math.PI;
-}
 
 // Map warning labels to joint coordinates to display dynamic highlight colors on the skeleton canvas
 function getConnectionColor(
@@ -76,6 +44,24 @@ function getConnectionColor(
     if (analysisType === "batting" && warningSet.has("Low bat lift")) {
       return "#f97316"; // orange
     }
+    if (analysisType === "shooting" && warningSet.has("Incomplete follow-through")) {
+      return "#f97316"; // orange
+    }
+    if (analysisType === "urdhva_hastasana" && warningSet.has("Straighten your elbows")) {
+      return "#f97316"; // orange
+    }
+  }
+
+  // Shoulders & Arms: Right (12-14, 14-16), Left (11-13, 13-15), 11-12 (Shoulders)
+  const isShoulderExtension =
+    (start === 11 && end === 13) ||
+    (start === 12 && end === 14) ||
+    (start === 11 && end === 12);
+  
+  if (isShoulderExtension) {
+    if (analysisType === "urdhva_hastasana" && warningSet.has("Raise arms fully overhead")) {
+      return "#ef4444"; // red
+    }
   }
 
   // Spine/Torso: 11-12, 23-24, 11-23, 12-24
@@ -91,6 +77,12 @@ function getConnectionColor(
     }
     if (analysisType === "batting" && warningSet.has("Balance unstable")) {
       return "#f97316"; // orange
+    }
+    if (analysisType === "shooting" && warningSet.has("Lean during jump shot")) {
+      return "#ef4444"; // red
+    }
+    if (analysisType === "urdhva_hastasana" && warningSet.has("Straighten your spine / torso")) {
+      return "#ef4444"; // red
     }
   }
 
@@ -111,99 +103,23 @@ function getConnectionColor(
     if (analysisType === "batting" && warningSet.has("Front knee bent too much")) {
       return "#ef4444"; // red
     }
+    if (analysisType === "shooting" && warningSet.has("Excessive knee bend")) {
+      return "#f97316"; // orange
+    }
   }
 
   // Default correct posture color: green
   return "#22c55e";
 }
 
-function computePoseMetrics(
-  landmarks: any[],
-  analysisType: SessionInputAnalysisType,
-  dominantHand: string
-): KinetraMetrics {
-  const pose = landmarks[0];
-  const isRight = dominantHand === "right";
-
-  const nose = pose[0];
-  const lShoulder = pose[11], rShoulder = pose[12];
-  const lElbow = pose[13], rElbow = pose[14];
-  const lWrist = pose[15], rWrist = pose[16];
-  const lHip = pose[23], rHip = pose[24];
-  const lKnee = pose[25], rKnee = pose[26];
-  const lAnkle = pose[27], rAnkle = pose[28];
-
-  const shoulder = isRight ? rShoulder : lShoulder;
-  const elbow = isRight ? rElbow : lElbow;
-  const wrist = isRight ? rWrist : lWrist;
-  const hip = isRight ? rHip : lHip;
-  const knee = isRight ? rKnee : lKnee;
-  const ankle = isRight ? rAnkle : lAnkle;
-
-  const elbowAngle = calculateAngle(shoulder, elbow, wrist);
-  const kneeAngle = calculateAngle(hip, knee, ankle);
-
-  const midHip = {
-    x: (lHip.x + rHip.x) / 2,
-    y: (lHip.y + rHip.y) / 2,
-    z: (lHip.z + rHip.z) / 2,
-  };
-  const midShoulder = {
-    x: (lShoulder.x + rShoulder.x) / 2,
-    y: (lShoulder.y + rShoulder.y) / 2,
-    z: (lShoulder.z + rShoulder.z) / 2,
-  };
-  const verticalAboveHip = { x: midHip.x, y: midHip.y - 1, z: midHip.z };
-  const spineTilt = calculateAngle(verticalAboveHip, midHip, midShoulder);
-  const shoulderAlignment = Math.abs(
-    calculateAngle(rShoulder, lShoulder, {
-      x: rShoulder.x,
-      y: lShoulder.y,
-      z: lShoulder.z,
-    })
-  );
-
-  const hipLevel = Math.abs(lHip.y - rHip.y);
-  const balanceScore = Math.max(0, Math.min(100, 100 - hipLevel * 500));
-
-  const warnings: string[] = [];
-  let techniqueScore = 100;
-
-  if (analysisType === "bowling") {
-    if (elbowAngle < 80) warnings.push("Elbow angle too low");
-    if (spineTilt > 30) warnings.push("Excessive spine tilt");
-    if (shoulderAlignment > 15) warnings.push("Poor shoulder rotation");
-    techniqueScore =
-      balanceScore * 0.25 +
-      Math.max(0, 100 - Math.abs(elbowAngle - 95)) * 0.25 +
-      Math.max(0, 100 - spineTilt * 2) * 0.3 +
-      Math.max(0, 100 - shoulderAlignment * 2) * 0.2;
-  } else {
-    if (kneeAngle < 120) warnings.push("Front knee bent too much");
-    if (elbowAngle < 90) warnings.push("Low bat lift");
-    techniqueScore =
-      balanceScore * 0.3 +
-      Math.max(0, 100 - Math.abs(kneeAngle - 150) * 0.5) * 0.3 +
-      Math.max(0, 100 - spineTilt * 2) * 0.2 +
-      Math.max(0, 100 - shoulderAlignment * 2) * 0.2;
-  }
-
-  return {
-    elbowAngle: Math.round(elbowAngle),
-    kneeAngle: Math.round(kneeAngle),
-    shoulderAlignment: Math.round(shoulderAlignment),
-    spineTilt: Math.round(spineTilt),
-    headStability: 95,
-    balanceScore: Math.round(balanceScore),
-    techniqueScore: Math.max(0, Math.min(100, Math.round(techniqueScore))),
-    warnings,
-  };
-}
 
 export function useKinetraAnalysis(
   analysisType: SessionInputAnalysisType,
-  dominantHand: string
+  dominantHand: string,
+  poseProcessorInput: "local" | "npu" = "local"
 ): KinetraAnalysisResult {
+  const poseProcessor: "local" | "npu" = "local";
+  const { config } = useSessionContext();
   const [isModelLoading, setIsModelLoading] = useState(true);
   const [modelError, setModelError] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<KinetraMetrics>(DEFAULT_METRICS);
@@ -216,60 +132,250 @@ export function useKinetraAnalysis(
   const lastInferenceTimeRef = useRef(0);
   const FPS_INTERVAL = 1000 / 15; // 15 fps
 
-  // Load model once using the singleton promise
+  // Refs for NPU mode canvas rendering
+  const currentCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const currentCanvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
+  const currentDrawingUtilsRef = useRef<DrawingUtils | null>(null);
+  const isProcessingFrameRef = useRef(false);
+  const currentSessionIdRef = useRef<string | null>(null);
+
+  // Keep latest parameters in refs so WebSocket handler has access without closure stale state
+  const currentAnalysisTypeRef = useRef(analysisType);
+  const currentDominantHandRef = useRef(dominantHand);
+  
+  useEffect(() => {
+    currentAnalysisTypeRef.current = analysisType;
+    currentDominantHandRef.current = dominantHand;
+  }, [analysisType, dominantHand]);
+
+  useEffect(() => {
+    currentSessionIdRef.current = config.sessionId;
+  }, [config.sessionId]);
+
+  const wsRef = useRef<WebSocket | null>(null);
+
+  // Load model OR initialize WebSocket connection based on poseProcessor
   useEffect(() => {
     let cancelled = false;
-    async function init() {
-      try {
-        if (sharedPoseLandmarker) {
-          poseLandmarkerRef.current = sharedPoseLandmarker;
-          setIsModelLoading(false);
-          return;
-        }
 
-        if (!sharedPoseLandmarkerPromise) {
-          sharedPoseLandmarkerPromise = (async () => {
-            const vision = await FilesetResolver.forVisionTasks(
-              "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
-            );
-            return await PoseLandmarker.createFromOptions(vision, {
-              baseOptions: {
-                modelAssetPath:
-                  "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
-                delegate: "GPU",
-              },
-              runningMode: "VIDEO",
-              numPoses: 1,
-            });
-          })();
-        }
+    if ((poseProcessor as string) === "npu") {
+      let socket: WebSocket | null = null;
+      let isMounted = true;
 
-        const landmarker = await sharedPoseLandmarkerPromise;
-        sharedPoseLandmarker = landmarker;
-        if (!cancelled) {
-          poseLandmarkerRef.current = landmarker;
+      const connect = () => {
+        if (!isMounted) return;
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        // Connect directly to backend at port 8000
+        const wsUrl = `${protocol}//${window.location.hostname}:8000/api/analysis/ws`;
+        console.log(`Connecting to NPU Pose API WebSocket: ${wsUrl}`);
+        socket = new WebSocket(wsUrl);
+
+        socket.onopen = () => {
+          if (!isMounted) {
+            socket?.close();
+            return;
+          }
+          console.log("Kinetra NPU WebSocket connected!");
+          setModelError(null);
           setIsModelLoading(false);
+        };
+
+        socket.onclose = () => {
+          console.log("Kinetra NPU WebSocket connection closed.");
+          if (isMounted) {
+            // Reconnect in 3s
+            setTimeout(connect, 3000);
+          }
+        };
+
+        socket.onerror = (e) => {
+          console.error("Kinetra NPU WebSocket error:", e);
+          if (isMounted) {
+            setModelError("FastAPI Backend WebSocket connection failed. Verify server is running.");
+          }
+        };
+
+        socket.onmessage = (event) => {
+          if (!isMounted) return;
+          try {
+            const data = JSON.parse(event.data);
+            if (data.error) {
+              console.warn("NPU error response:", data.error);
+              isProcessingFrameRef.current = false;
+              return;
+            }
+
+            // Update metrics from backend
+            const backendMetrics: KinetraMetrics = {
+              elbowAngle: Math.round(data.angles?.elbow_angle || 0),
+              kneeAngle: Math.round(data.angles?.knee_angle || 0),
+              shoulderAngle: Math.round(data.angles?.shoulder_angle || 0),
+              hipAngle: Math.round(data.angles?.hip_angle || 0),
+              shoulderAlignment: Math.round(data.angles?.shoulder_alignment || 0),
+              spineTilt: Math.round(data.angles?.spine_tilt || 0),
+              postureScore: Math.round(data.score?.posture_score || 100),
+              balanceScore: Math.round(data.score?.balance_score || 100),
+              techniqueScore: Math.round(data.score?.technique_score || 100),
+              warnings: data.warnings || [],
+            };
+            setMetrics(backendMetrics);
+
+            // Draw skeleton overlay
+            if (
+              data.landmarks &&
+              data.landmarks.length > 0 &&
+              currentCanvasCtxRef.current &&
+              currentCanvasRef.current
+            ) {
+              const ctx = currentCanvasCtxRef.current;
+              const canvas = currentCanvasRef.current;
+              ctx.save();
+              ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+              // Map YOLO 17 keypoints -> MP 33 keypoints
+              const yoloToMpMap: Record<number, number> = {
+                0: 0,   // nose
+                1: 2,   // left eye
+                2: 5,   // right eye
+                3: 7,   // left ear
+                4: 8,   // right ear
+                5: 11,  // left shoulder
+                6: 12,  // right shoulder
+                7: 13,  // left elbow
+                8: 14,  // right elbow
+                9: 15,  // left wrist
+                10: 16, // right wrist
+                11: 23, // left hip
+                12: 24, // right hip
+                13: 25, // left knee
+                14: 26, // right knee
+                15: 27, // left ankle
+                16: 28, // right ankle
+              };
+
+              const mpLandmarks = Array(33).fill(null).map(() => ({ x: 0, y: 0, z: 0, visibility: 0 }));
+              data.landmarks.forEach((kp: any, idx: number) => {
+                const mpIdx = yoloToMpMap[idx];
+                if (mpIdx !== undefined) {
+                  mpLandmarks[mpIdx] = {
+                    x: kp.x / canvas.width,
+                    y: kp.y / canvas.height,
+                    z: 0,
+                    visibility: kp.confidence
+                  };
+                }
+              });
+
+              const currentWarnings = backendMetrics.warnings;
+              const drawingUtils = currentDrawingUtilsRef.current;
+
+              if (drawingUtils) {
+                // Draw links
+                for (const connection of PoseLandmarker.POSE_CONNECTIONS) {
+                  const color = getConnectionColor(
+                    connection.start,
+                    connection.end,
+                    currentWarnings,
+                    currentDominantHandRef.current,
+                    currentAnalysisTypeRef.current
+                  );
+                  const startLandmark = mpLandmarks[connection.start];
+                  const endLandmark = mpLandmarks[connection.end];
+                  if (
+                    startLandmark &&
+                    endLandmark &&
+                    (startLandmark.x !== 0 || startLandmark.y !== 0) &&
+                    (endLandmark.x !== 0 || endLandmark.y !== 0)
+                  ) {
+                    drawingUtils.drawConnectors(mpLandmarks, [connection], { color, lineWidth: 4 });
+                  }
+                }
+
+                // Draw node circles
+                const validLandmarks = mpLandmarks.filter(lm => lm.x !== 0 || lm.y !== 0);
+                drawingUtils.drawLandmarks(validLandmarks, {
+                  color: "#ffffff",
+                  lineWidth: 1.5,
+                  radius: 3.5,
+                });
+              }
+              ctx.restore();
+            }
+
+            isProcessingFrameRef.current = false;
+          } catch (err) {
+            console.error("Failed parsing message:", err);
+            isProcessingFrameRef.current = false;
+          }
+        };
+
+        wsRef.current = socket;
+      };
+
+      setIsModelLoading(true);
+      connect();
+
+      return () => {
+        isMounted = false;
+        if (socket) {
+          socket.close();
         }
-      } catch (err) {
-        sharedPoseLandmarkerPromise = null; // allow retrying
-        if (!cancelled) {
-          setModelError("Failed to load vision model. Check your network connection.");
-          setIsModelLoading(false);
+        wsRef.current = null;
+      };
+    } else {
+      // Local MediaPipe initialization (Option B)
+      async function init() {
+        try {
+          if (sharedPoseLandmarker) {
+            poseLandmarkerRef.current = sharedPoseLandmarker;
+            setIsModelLoading(false);
+            return;
+          }
+
+          if (!sharedPoseLandmarkerPromise) {
+            sharedPoseLandmarkerPromise = (async () => {
+              const vision = await FilesetResolver.forVisionTasks(
+                "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+              );
+              return await PoseLandmarker.createFromOptions(vision, {
+                baseOptions: {
+                  modelAssetPath:
+                    "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+                  delegate: "GPU",
+                },
+                runningMode: "VIDEO",
+                numPoses: 1,
+              });
+            })();
+          }
+
+          const landmarker = await sharedPoseLandmarkerPromise;
+          sharedPoseLandmarker = landmarker;
+          if (!cancelled) {
+            poseLandmarkerRef.current = landmarker;
+            setIsModelLoading(false);
+          }
+        } catch (err) {
+          sharedPoseLandmarkerPromise = null;
+          if (!cancelled) {
+            setModelError("Failed to load vision model. Check your network connection.");
+            setIsModelLoading(false);
+          }
         }
       }
+      init();
+      return () => {
+        cancelled = true;
+        cancelAnimationFrame(rafRef.current);
+        poseLandmarkerRef.current = null;
+      };
     }
-    init();
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(rafRef.current);
-      poseLandmarkerRef.current = null;
-    };
-  }, []);
+  }, [poseProcessor]);
 
   const analyzePose = useCallback(
     (landmarks: any[]) => {
       if (!landmarks || landmarks.length === 0) return DEFAULT_METRICS;
-      const res = computePoseMetrics(landmarks, analysisType, dominantHand);
+      const res = evaluatePose(landmarks, analysisType as any, dominantHand as "left" | "right");
       setMetrics(res);
       return res;
     },
@@ -278,13 +384,19 @@ export function useKinetraAnalysis(
 
   const startAnalysis = useCallback(
     (videoElement: HTMLVideoElement, canvasElement: HTMLCanvasElement) => {
-      if (!poseLandmarkerRef.current) return;
       if (isRunningRef.current) return;
+      if (poseProcessor === "local" && !poseLandmarkerRef.current) return;
 
       isRunningRef.current = true;
       const ctx = canvasElement.getContext("2d");
       if (!ctx) return;
       const drawingUtils = new DrawingUtils(ctx);
+
+      // Save references for WebSocket NPU loop drawing
+      currentCanvasRef.current = canvasElement;
+      currentCanvasCtxRef.current = ctx;
+      currentDrawingUtilsRef.current = drawingUtils;
+      isProcessingFrameRef.current = false;
 
       const loop = () => {
         if (!isRunningRef.current) return;
@@ -303,8 +415,7 @@ export function useKinetraAnalysis(
           videoWidth > 0 &&
           videoHeight > 0 &&
           !isPaused &&
-          hasStream &&
-          poseLandmarkerRef.current;
+          hasStream;
 
         if (ready) {
           if (canvasElement.width !== videoWidth || canvasElement.height !== videoHeight) {
@@ -315,46 +426,76 @@ export function useKinetraAnalysis(
           const frameChanged = videoElement.currentTime !== lastVideoTimeRef.current;
           const throttleOk = now - lastInferenceTimeRef.current >= FPS_INTERVAL;
 
-          if (frameChanged && throttleOk && !graphDeadRef.current) {
+          if (frameChanged && throttleOk) {
             lastVideoTimeRef.current = videoElement.currentTime;
             lastInferenceTimeRef.current = now;
 
-            try {
-              const result = poseLandmarkerRef.current!.detectForVideo(videoElement, now);
-              ctx.save();
-              ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            if ((poseProcessor as string) === "npu") {
+              // WebSocket streaming mode
+              if (
+                wsRef.current &&
+                wsRef.current.readyState === WebSocket.OPEN &&
+                !isProcessingFrameRef.current
+              ) {
+                isProcessingFrameRef.current = true;
 
-              if (result.landmarks && result.landmarks.length > 0) {
-                // Calculate metrics synchronously for visual coupling with connection lines
-                const currentMetrics = analyzePose(result.landmarks);
-                const currentWarnings = currentMetrics.warnings;
+                // Draw frame to capture canvas
+                const captureCanvas = document.createElement("canvas");
+                captureCanvas.width = videoWidth;
+                captureCanvas.height = videoHeight;
+                const captureCtx = captureCanvas.getContext("2d");
+                if (captureCtx) {
+                  captureCtx.drawImage(videoElement, 0, 0, videoWidth, videoHeight);
+                  const base64Frame = captureCanvas.toDataURL("image/jpeg", 0.6);
 
-                for (const landmark of result.landmarks) {
-                  // Draw each connector with its specific highlight color based on active warnings
-                  for (const connection of PoseLandmarker.POSE_CONNECTIONS) {
-                    const color = getConnectionColor(
-                      connection.start,
-                      connection.end,
-                      currentWarnings,
-                      dominantHand,
-                      analysisType
-                    );
-                    drawingUtils.drawConnectors(landmark, [connection], { color, lineWidth: 4 });
-                  }
-
-                  drawingUtils.drawLandmarks(landmark, {
-                    color: "#ffffff",
-                    lineWidth: 1.5,
-                    radius: 3.5,
-                  });
+                  const payload = {
+                    frame: base64Frame,
+                    session_id: currentSessionIdRef.current || "default_session",
+                    analysis_type: analysisType,
+                    dominant_hand: dominantHand,
+                  };
+                  wsRef.current.send(JSON.stringify(payload));
+                } else {
+                  isProcessingFrameRef.current = false;
                 }
               }
-              ctx.restore();
-            } catch (e) {
-              console.error("MediaPipe detection error caught:", e);
-              graphDeadRef.current = true;
-              lastVideoTimeRef.current = -1;
-              setTimeout(() => { graphDeadRef.current = false; }, 500);
+            } else if (poseLandmarkerRef.current && !graphDeadRef.current) {
+              // Local Browser MediaPipe Mode
+              try {
+                const result = poseLandmarkerRef.current.detectForVideo(videoElement, now);
+                ctx.save();
+                ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+                if (result.landmarks && result.landmarks.length > 0) {
+                  const currentMetrics = analyzePose(result.landmarks);
+                  const currentWarnings = currentMetrics.warnings;
+
+                  for (const landmark of result.landmarks) {
+                    for (const connection of PoseLandmarker.POSE_CONNECTIONS) {
+                      const color = getConnectionColor(
+                        connection.start,
+                        connection.end,
+                        currentWarnings,
+                        dominantHand,
+                        analysisType
+                      );
+                      drawingUtils.drawConnectors(landmark, [connection], { color, lineWidth: 4 });
+                    }
+
+                    drawingUtils.drawLandmarks(landmark, {
+                      color: "#ffffff",
+                      lineWidth: 1.5,
+                      radius: 3.5,
+                    });
+                  }
+                }
+                ctx.restore();
+              } catch (e) {
+                console.error("MediaPipe detection error caught:", e);
+                graphDeadRef.current = true;
+                lastVideoTimeRef.current = -1;
+                setTimeout(() => { graphDeadRef.current = false; }, 500);
+              }
             }
           }
         }
@@ -364,13 +505,50 @@ export function useKinetraAnalysis(
 
       rafRef.current = requestAnimationFrame(loop);
     },
-    [analyzePose, FPS_INTERVAL, dominantHand, analysisType]
+    [analyzePose, FPS_INTERVAL, dominantHand, analysisType, poseProcessor]
   );
 
   const stopAnalysis = useCallback(() => {
     isRunningRef.current = false;
     cancelAnimationFrame(rafRef.current);
+    currentCanvasRef.current = null;
+    currentCanvasCtxRef.current = null;
+    currentDrawingUtilsRef.current = null;
+    isProcessingFrameRef.current = false;
+    arduinoHardware.setLedStatus("off");
   }, []);
+
+  // Sync Arduino status (searching / active / success / warning) based on app state
+  const lastBuzzerTimeRef = useRef(0);
+  useEffect(() => {
+    if (isModelLoading) {
+      arduinoHardware.setLedStatus("searching");
+      return;
+    }
+
+    if (!isRunningRef.current) {
+      arduinoHardware.setLedStatus("off");
+      return;
+    }
+
+    if (metrics.warnings.length > 0) {
+      arduinoHardware.setLedStatus("warning");
+      const now = Date.now();
+      if (now - lastBuzzerTimeRef.current > 4000) {
+        lastBuzzerTimeRef.current = now;
+        arduinoHardware.triggerBuzzer("warning_alarm");
+      }
+    } else if (metrics.techniqueScore >= 90) {
+      arduinoHardware.setLedStatus("success");
+      const now = Date.now();
+      if (now - lastBuzzerTimeRef.current > 6000) {
+        lastBuzzerTimeRef.current = now;
+        arduinoHardware.triggerBuzzer("success_chime");
+      }
+    } else {
+      arduinoHardware.setLedStatus("active");
+    }
+  }, [isModelLoading, metrics.warnings, metrics.techniqueScore]);
 
   return { isModelLoading, modelError, metrics, startAnalysis, stopAnalysis };
 }

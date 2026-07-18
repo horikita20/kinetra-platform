@@ -15,6 +15,8 @@ export type SessionInputAnalysisType = typeof SessionInputAnalysisType[keyof typ
 export const SessionInputAnalysisType = {
   bowling: 'bowling',
   batting: 'batting',
+  shooting: 'shooting',
+  urdhva_hastasana: 'urdhva_hastasana',
 } as const;
 
 export type SessionInputSkillLevel = typeof SessionInputSkillLevel[keyof typeof SessionInputSkillLevel];
@@ -48,6 +50,8 @@ export type SessionAnalysisType = typeof SessionAnalysisType[keyof typeof Sessio
 export const SessionAnalysisType = {
   bowling: 'bowling',
   batting: 'batting',
+  shooting: 'shooting',
+  urdhva_hastasana: 'urdhva_hastasana',
 } as const;
 
 export type SessionSkillLevel = typeof SessionSkillLevel[keyof typeof SessionSkillLevel];
@@ -108,6 +112,8 @@ export type SessionSummaryAnalysisType = typeof SessionSummaryAnalysisType[keyof
 export const SessionSummaryAnalysisType = {
   bowling: 'bowling',
   batting: 'batting',
+  shooting: 'shooting',
+  urdhva_hastasana: 'urdhva_hastasana',
 } as const;
 
 export type SessionSummarySkillLevel = typeof SessionSummarySkillLevel[keyof typeof SessionSummarySkillLevel];
@@ -196,6 +202,8 @@ export type UploadVideoInputAnalysisType = typeof UploadVideoInputAnalysisType[k
 export const UploadVideoInputAnalysisType = {
   bowling: 'bowling',
   batting: 'batting',
+  shooting: 'shooting',
+  urdhva_hastasana: 'urdhva_hastasana',
 } as const;
 
 export type UploadVideoInputSkillLevel = typeof UploadVideoInputSkillLevel[keyof typeof UploadVideoInputSkillLevel];

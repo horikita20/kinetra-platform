@@ -29,6 +29,11 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 
+// New components import
+import { AICoachPanel } from "@/components/coach/AICoachPanel";
+import { MascotAssistant } from "@/components/mascot/MascotAssistant";
+
+
 export default function Analysis() {
   const [, setLocation] = useLocation();
   const { config } = useSessionContext();
@@ -41,7 +46,7 @@ export default function Analysis() {
   const cameraStartedRef = useRef(false);
 
   const { isModelLoading, modelError, metrics, startAnalysis, stopAnalysis } =
-    useKinetraAnalysis(config.analysisType, config.dominantHand);
+    useKinetraAnalysis(config.analysisType, config.dominantHand, config.poseProcessor);
 
   const endSessionMutation = useEndSession();
 
@@ -456,303 +461,322 @@ export default function Analysis() {
   };
 
   return (
-    <div className="h-screen w-full flex flex-col bg-gray-950 font-sans text-gray-100 overflow-y-auto md:overflow-hidden relative pb-20 md:pb-0">
-      
-      {/* HEADER SECTION */}
-      <header className="h-16 border-b border-white/5 bg-gray-900/60 backdrop-blur-md px-6 flex items-center justify-between z-10 shrink-0">
-        <div className="flex items-center gap-3">
-          <KinectraLogo className="w-9 h-9" />
-          <div>
-            <h1 className="text-sm font-bold tracking-wider text-gray-200">KINETRA LABS</h1>
-            <p className="text-[10px] text-gray-400 font-mono tracking-widest uppercase">
-              Autonomous Coaching Hub
-            </p>
-          </div>
-        </div>
+    <div className="h-screen w-full bg-gray-950 font-sans text-gray-100 overflow-y-auto scroll-smooth snap-y snap-mandatory relative pb-0">
+      {/* Floating AI Coach Panel Overlay */}
+      <AICoachPanel 
+        metrics={metrics} 
+        isSpeaking={isSpeaking} 
+        setIsSpeaking={setIsSpeaking} 
+      />
 
-        <div className="flex items-center gap-6 font-mono text-xs text-gray-300">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/5 border border-white/10">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            <span className="text-gray-400 uppercase">Athlete:</span>
-            <span className="font-bold text-gray-100">{config.athleteName}</span>
-          </div>
-          
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/5 border border-white/10">
-            <span className="text-gray-400 uppercase">Discipline:</span>
-            <span className="font-bold text-primary capitalize">{config.analysisType}</span>
-          </div>
+      {/* Mascot Cheerleader assistant */}
+      <MascotAssistant metrics={metrics} />
 
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/5 border border-white/10">
-            <span className="text-gray-400 uppercase">Time:</span>
-            <span className="font-bold text-gray-100">{formatTime(elapsedSeconds)}</span>
-          </div>
-        </div>
-
-        <Button 
-          variant="destructive" 
-          onClick={handleEndSession}
-          className="shadow-lg shadow-red-950/20 font-semibold gap-2 border border-red-500/20"
-        >
-          <StopCircle className="h-4 w-4" /> End Session
-        </Button>
-      </header>
-
-      {/* WORKSPACE AREA */}
-      <div className="flex-1 flex flex-col min-h-0 relative w-full">
+      {/* SECTION 1: HERO FULLSCREEN CAMERA EXPERIENCE (100vh) */}
+      <section className="w-full h-screen relative snap-start flex flex-col justify-between overflow-hidden">
         
-        {/* SCORE CARD (Mobile Only) */}
-        <div className="flex md:hidden items-center justify-between px-4 py-2.5 mx-4 mt-3 bg-gray-900 border border-white/5 rounded-xl shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-gray-400 font-bold tracking-wider uppercase">Form Score</span>
-            <span className="text-sm font-bold font-mono text-emerald-500">{metrics.techniqueScore}/100</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-gray-400 font-bold tracking-wider uppercase">Injury Risk</span>
-            <span className={`text-[10px] font-bold font-mono py-0.5 px-2 rounded-md ${
-              metrics.techniqueScore < 60 ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 
-              metrics.techniqueScore < 80 ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' : 
-              'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-            }`}>
-              {metrics.techniqueScore < 60 ? 'HIGH' : metrics.techniqueScore < 80 ? 'MEDIUM' : 'LOW'}
-            </span>
-          </div>
-        </div>
-
-        {/* Webcam Feed with Pose Skeleton overlay */}
-        <div className="w-full bg-gray-950 p-4 md:p-5 flex flex-col justify-between min-h-0">
-          <div className="flex items-center justify-between mb-3 shrink-0">
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-              <Camera className="h-3.5 w-3.5 text-primary" /> Live Player Feed
-            </span>
-            {isRecording && (
-              <span className="text-[10px] font-mono text-red-500 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20 animate-pulse flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                RECORDING
-              </span>
-            )}
+        {/* Floating Absolute Header */}
+        <header className="absolute top-0 inset-x-0 h-16 bg-gradient-to-b from-gray-950/90 to-transparent px-6 flex items-center justify-between z-20">
+          <div className="flex items-center gap-3">
+            <KinectraLogo className="w-9 h-9" />
+            <div>
+              <h1 className="text-sm font-bold tracking-wider text-gray-200">KINETRA LABS</h1>
+              <p className="text-[10px] text-gray-400 font-mono tracking-widest uppercase">
+                Autonomous Coaching Hub
+              </p>
+            </div>
           </div>
 
-          <div className="h-[50vh] md:h-[70vh] min-h-[50vh] md:min-h-[70vh] max-h-[50vh] md:max-h-[70vh] shrink-0 w-full relative rounded-xl overflow-hidden border border-white/10 bg-black flex items-center justify-center shadow-lg">
-            <video
-              ref={videoRef}
-              playsInline
-              muted
-              className="w-full h-full object-cover scale-x-[-1]"
-            />
-            <canvas
-              ref={canvasRef}
-              className="absolute inset-0 w-full h-full object-contain scale-x-[-1] z-10 pointer-events-none"
-            />
-            {hasCameraPermission === false && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-4 bg-gray-950/90 text-center">
-                <AlertTriangle className="h-8 w-8 text-red-500 mb-2" />
-                <p className="text-sm font-semibold">Camera Access Denied</p>
-                <p className="text-xs text-gray-400 mt-1">Please enable camera permission in your browser settings.</p>
-              </div>
-            )}
-            {isModelLoading && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-950/90 z-20">
-                <Loader2 className="h-8 w-8 text-primary animate-spin mb-3" />
-                <p className="text-sm font-semibold text-gray-200">Initializing Core CV Engine...</p>
-                <p className="text-xs text-gray-400 mt-1">Downloading pose landmarker packages...</p>
-              </div>
-            )}
-            {modelError && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-4 bg-gray-950/95 text-center">
-                <AlertTriangle className="h-8 w-8 text-red-500 mb-2" />
-                <p className="text-sm font-semibold text-red-400">Model Initialisation Error</p>
-                <p className="text-xs text-gray-400 mt-1">{modelError}</p>
-              </div>
-            )}
-          </div>
-          <div className="mt-2 text-[10px] font-mono text-gray-500 uppercase tracking-wider shrink-0 text-center">
-            Real-time client-side coordinate mapping overlaid.
-          </div>
-        </div>
-
-        {/* MOBILE BIOMECHANICS STATS & CONTROLS */}
-        <div className="flex md:hidden flex-col gap-4 px-4 py-3 bg-gray-900/60 border-t border-white/5">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white/3 border border-white/5 rounded-xl p-2.5 flex flex-col justify-between">
-              <span className="text-[10px] text-gray-400 font-bold tracking-wider uppercase">Elbow Angle</span>
-              <div className="text-xs font-bold font-mono text-primary mt-1" style={{ fontSize: '12px' }}>{metrics.elbowAngle}°</div>
+          <div className="hidden md:flex items-center gap-6 font-mono text-xs text-gray-300">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-black/40 border border-white/10 backdrop-blur-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              <span className="text-gray-400 uppercase">Athlete:</span>
+              <span className="font-bold text-gray-100">{config.athleteName}</span>
             </div>
             
-            <div className="bg-white/3 border border-white/5 rounded-xl p-2.5 flex flex-col justify-between">
-              <span className="text-[10px] text-gray-400 font-bold tracking-wider uppercase">Knee Angle</span>
-              <div className="text-xs font-bold font-mono text-gray-200 mt-1" style={{ fontSize: '12px' }}>{metrics.kneeAngle}°</div>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-black/40 border border-white/10 backdrop-blur-sm">
+              <span className="text-gray-400 uppercase">Discipline:</span>
+              <span className="font-bold text-primary capitalize">{config.analysisType}</span>
             </div>
 
-            <div className="bg-white/3 border border-white/5 rounded-xl p-2.5 flex flex-col justify-between">
-              <span className="text-[10px] text-gray-400 font-bold tracking-wider uppercase">Spine Tilt</span>
-              <div className="text-xs font-bold font-mono text-gray-200 mt-1" style={{ fontSize: '12px' }}>{metrics.spineTilt}°</div>
-            </div>
-
-            <div className="bg-white/3 border border-white/5 rounded-xl p-2.5 flex flex-col justify-between">
-              <span className="text-[10px] text-gray-400 font-bold tracking-wider uppercase">Balance Score</span>
-              <div className="text-xs font-bold font-mono text-gray-200 mt-1" style={{ fontSize: '12px' }}>{metrics.balanceScore}%</div>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-black/40 border border-white/10 backdrop-blur-sm">
+              <span className="text-gray-400 uppercase">Time:</span>
+              <span className="font-bold text-gray-100">{formatTime(elapsedSeconds)}</span>
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
+          <Button 
+            variant="destructive" 
+            onClick={handleEndSession}
+            className="shadow-lg shadow-red-950/20 font-semibold gap-2 border border-red-500/20 z-20"
+          >
+            <StopCircle className="h-4 w-4" /> End Session
+          </Button>
+        </header>
+
+        {/* Fullscreen Video Feed Container */}
+        <div className="absolute inset-0 w-full h-full bg-black z-0">
+          <video
+            ref={videoRef}
+            playsInline
+            muted
+            className="w-full h-full object-cover scale-x-[-1]"
+          />
+          <canvas
+            ref={canvasRef}
+            className="absolute inset-0 w-full h-full object-cover scale-x-[-1] z-10 pointer-events-none"
+          />
+          {hasCameraPermission === false && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-4 bg-gray-950/90 text-center z-25">
+              <AlertTriangle className="h-8 w-8 text-red-500 mb-2" />
+              <p className="text-sm font-semibold">Camera Access Denied</p>
+              <p className="text-xs text-gray-400 mt-1">Please enable camera permission in your browser settings.</p>
+            </div>
+          )}
+          {isModelLoading && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-950/90 z-25">
+              <Loader2 className="h-8 w-8 text-primary animate-spin mb-3" />
+              <p className="text-sm font-semibold text-gray-200">Initializing Core CV Engine...</p>
+              <p className="text-xs text-gray-400 mt-1 font-mono">Loading pose landmarker packages...</p>
+            </div>
+          )}
+          {modelError && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-4 bg-gray-950/95 text-center z-25">
+              <AlertTriangle className="h-8 w-8 text-red-500 mb-2" />
+              <p className="text-sm font-semibold text-red-400">Model Initialisation Error</p>
+              <p className="text-xs text-gray-400 mt-1">{modelError}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Live HUD Information & Recording Panel overlay at the bottom */}
+        <div className="absolute bottom-28 inset-x-6 z-20 flex flex-col md:flex-row items-end md:items-center justify-between gap-4 select-none pointer-events-none">
+          {/* Quick HUD Metrics */}
+          <div className="flex flex-col gap-2 p-4 rounded-2xl bg-black/50 border border-white/5 backdrop-blur-md text-left max-w-sm pointer-events-auto">
+            <span className="text-[10px] text-orange-400 font-bold tracking-widest font-mono uppercase">Live Biomechanics HUD</span>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+              <div className="flex justify-between gap-2 border-r border-white/10 pr-2">
+                <span className="text-gray-400">Score:</span>
+                <span className="font-bold text-emerald-400 font-mono">{metrics.techniqueScore}/100</span>
+              </div>
+              <div className="flex justify-between gap-2">
+                <span className="text-gray-400">Balance:</span>
+                <span className="font-bold text-gray-200 font-mono">{metrics.balanceScore}%</span>
+              </div>
+              <div className="flex justify-between gap-2 border-r border-white/10 pr-2">
+                <span className="text-gray-400">Elbow:</span>
+                <span className="font-bold text-gray-200 font-mono">{metrics.elbowAngle}°</span>
+              </div>
+              <div className="flex justify-between gap-2">
+                <span className="text-gray-400">Knee:</span>
+                <span className="font-bold text-gray-200 font-mono">{metrics.kneeAngle}°</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Trigger Buttons */}
+          <div className="flex items-center gap-3 pointer-events-auto">
             {!isRecording ? (
               <Button 
                 onClick={startRecording}
-                className="bg-red-500 text-white font-semibold flex items-center justify-center gap-2 hover:bg-red-600 shadow-md shadow-red-950/20 w-full"
+                className="bg-red-500 text-white font-semibold flex items-center justify-center gap-2 hover:bg-red-600 shadow-md shadow-red-950/20"
               >
-                <span className="w-2.5 h-2.5 rounded-full bg-white animate-pulse" />
+                <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
                 Record Session
               </Button>
             ) : (
               <Button 
                 onClick={stopRecording}
-                className="bg-gray-800 border border-white/10 text-white font-semibold flex items-center justify-center gap-2 hover:bg-gray-700 w-full"
+                className="bg-gray-800 border border-white/10 text-white font-semibold flex items-center justify-center gap-2 hover:bg-gray-700"
               >
                 <StopCircle className="h-4 w-4 text-red-500" />
                 Stop Recording
               </Button>
             )}
 
-            <Button 
-              onClick={handleEndSession}
+            <Button
+              onClick={() => {
+                document.getElementById("analytics-dashboard-section")?.scrollIntoView({ behavior: "smooth" });
+              }}
               variant="outline"
-              className="font-semibold w-full"
+              className="bg-gray-900/60 border border-white/10 backdrop-blur-sm text-gray-200"
             >
-              <BarChart2 className="h-4 w-4 mr-2" /> View Analysis Report
+              <BarChart2 className="w-4 h-4 mr-1.5" /> Dashboard
             </Button>
           </div>
         </div>
 
-      </div>
+        {/* Scroll Down Indicator */}
+        <div 
+          onClick={() => {
+            document.getElementById("analytics-dashboard-section")?.scrollIntoView({ behavior: "smooth" });
+          }}
+          className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-1.5 cursor-pointer text-gray-400 hover:text-white transition-colors z-20 animate-bounce"
+        >
+          <span className="text-[10px] font-mono font-bold tracking-widest uppercase">Scroll for Dashboard</span>
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+          </svg>
+        </div>
 
-      {/* METRICS PANEL & ACTION BUTTONS (Desktop Only) */}
-      <div className="hidden md:flex h-44 border-t border-white/5 bg-gray-900/60 p-4 gap-6 shrink-0 z-10">
-        
-        {/* Core Metrics panel widgets */}
-        <div className="flex-1 grid grid-cols-6 gap-3 items-center">
-          <div className="bg-white/3 border border-white/5 rounded-xl p-2.5 space-y-1">
-            <span className="text-[10px] text-gray-400 font-bold block tracking-wider uppercase">Elbow Angle</span>
-            <div className="text-lg font-bold font-mono text-primary">{metrics.elbowAngle}°</div>
-          </div>
-          
-          <div className="bg-white/3 border border-white/5 rounded-xl p-2.5 space-y-1">
-            <span className="text-[10px] text-gray-400 font-bold block tracking-wider uppercase">Knee Angle</span>
-            <div className="text-lg font-bold font-mono text-gray-200">{metrics.kneeAngle}°</div>
-          </div>
+      </section>
 
-          <div className="bg-white/3 border border-white/5 rounded-xl p-2.5 space-y-1">
-            <span className="text-[10px] text-gray-400 font-bold block tracking-wider uppercase">Spine Tilt</span>
-            <div className="text-lg font-bold font-mono text-gray-200">{metrics.spineTilt}°</div>
-          </div>
-
-          <div className="bg-white/3 border border-white/5 rounded-xl p-2.5 space-y-1">
-            <span className="text-[10px] text-gray-400 font-bold block tracking-wider uppercase">Balance Score</span>
-            <div className="text-lg font-bold font-mono text-gray-200">{metrics.balanceScore}%</div>
-          </div>
-
-          <div className="bg-white/3 border border-white/5 rounded-xl p-2.5 space-y-1">
-            <span className="text-[10px] text-gray-400 font-bold block tracking-wider uppercase">Form Score</span>
-            <div className="text-lg font-bold font-mono text-emerald-500">{metrics.techniqueScore}/100</div>
-          </div>
-
-          <div className="bg-white/3 border border-white/5 rounded-xl p-2.5 space-y-1">
-            <span className="text-[10px] text-gray-400 font-bold block tracking-wider uppercase">Injury Risk</span>
-            <div className={`text-xs font-bold font-mono py-0.5 px-2 rounded-md inline-block ${
-              metrics.techniqueScore < 60 ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 
-              metrics.techniqueScore < 80 ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' : 
-              'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-            }`}>
-              {metrics.techniqueScore < 60 ? 'HIGH' : metrics.techniqueScore < 80 ? 'MEDIUM' : 'LOW'}
+      {/* SECTION 2: DETAILED ANALYTICS DASHBOARD SECTION */}
+      <section 
+        id="analytics-dashboard-section" 
+        className="w-full min-h-screen snap-start bg-gray-950 border-t border-white/5 p-6 flex flex-col justify-between relative z-10"
+      >
+        <div className="space-y-6">
+          {/* Dashboard Header */}
+          <div className="flex items-center justify-between border-b border-white/5 pb-4">
+            <div>
+              <h2 className="text-xl font-bold tracking-tight text-gray-100 flex items-center gap-2">
+                <Activity className="h-5 w-5 text-primary" /> Biomechanical Analysis Dashboard
+              </h2>
+              <p className="text-xs text-gray-400 mt-1">Athlete: <span className="font-bold text-gray-300">{config.athleteName}</span> • Discipline: <span className="text-primary font-semibold uppercase">{config.analysisType}</span></p>
             </div>
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              className="text-xs text-gray-400 hover:text-white font-semibold font-mono"
+            >
+              ↑ Live Feed
+            </Button>
           </div>
-        </div>
 
-        {/* Buttons Controls */}
-        <div className="w-64 flex flex-col justify-center gap-3 pr-2 border-l border-white/5 pl-6">
-          {!isRecording ? (
-            <Button 
-              onClick={startRecording}
-              className="bg-red-500 text-white font-semibold flex items-center justify-center gap-2 hover:bg-red-600 shadow-md shadow-red-950/20"
-            >
-              <span className="w-2.5 h-2.5 rounded-full bg-white animate-pulse" />
-              Record Session
-            </Button>
-          ) : (
-            <Button 
-              onClick={stopRecording}
-              className="bg-gray-800 border border-white/10 text-white font-semibold flex items-center justify-center gap-2 hover:bg-gray-700"
-            >
-              <StopCircle className="h-4 w-4 text-red-500" />
-              Stop Recording
-            </Button>
-          )}
-
-          <Button 
-            onClick={handleEndSession}
-            variant="outline"
-            className="font-semibold"
-          >
-            <BarChart2 className="h-4 w-4 mr-2" /> View Analysis Report
-          </Button>
-        </div>
-
-      </div>
-
-      {/* SNAPSHOTS BOTTOM GALLERY STRIP */}
-      <div className="h-24 border-t border-white/5 bg-gray-950/80 px-6 py-2.5 flex items-center gap-4 shrink-0 overflow-x-auto select-none scrollbar-thin">
-        <span className="text-[10px] font-bold text-gray-400 tracking-wider uppercase shrink-0">
-          Auto Snapshot Gallery
-        </span>
-        
-        <div className="flex gap-3 min-w-0">
-          {snapshots.map((snap) => (
-            <div 
-              key={snap.id} 
-              onClick={() => setSelectedSnapshot(snap)}
-              className={`relative h-14 w-24 rounded-lg overflow-hidden border cursor-pointer hover:scale-[1.03] transition-all shrink-0 ${
-                snap.type === "perfect" ? "border-emerald-500 bg-emerald-500/5" : "border-red-500 bg-red-500/5"
-              }`}
-            >
-              <img src={snap.image} className="w-full h-full object-cover" />
-              <div className={`absolute bottom-0 inset-x-0 text-[8px] font-bold px-1.5 py-0.5 truncate text-center ${
-                snap.type === "perfect" ? "bg-emerald-500 text-white" : "bg-red-500 text-white"
-              }`}>
-                {snap.label}
+          {/* Unified Metrics Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {/* Technique Score */}
+            <div className="bg-white/3 border border-white/5 rounded-xl p-4 flex flex-col justify-between col-span-2 shadow-inner">
+              <span className="text-[10px] text-gray-400 font-bold block tracking-wider uppercase">Live Technique Score</span>
+              <div className="flex items-baseline gap-3 mt-2">
+                <div className="text-4xl font-extrabold font-mono text-emerald-400">{metrics.techniqueScore}/100</div>
+                <div className={`text-[10px] font-bold font-mono py-0.5 px-2 rounded-md ${getStatusColor(metrics.techniqueScore)}`}>
+                  {getScoreLabel(metrics.techniqueScore)}
+                </div>
               </div>
+              <p className="text-[10px] text-gray-500 font-medium leading-relaxed mt-2 border-t border-white/5 pt-2">
+                Computed biomechanics score combining joint alignment, posture and stance stability.
+              </p>
             </div>
-          ))}
 
-          {snapshots.length === 0 && (
-            <div className="text-[11px] text-gray-500 italic flex items-center">
-              Autonomous snapshots will populate here when form deviations or perfect deliveries occur.
+            {/* Posture Score */}
+            <div className="bg-white/3 border border-white/5 rounded-xl p-4 flex flex-col justify-between shadow-inner">
+              <span className="text-[10px] text-gray-400 font-bold block tracking-wider uppercase">Posture Quality</span>
+              <div className="text-3xl font-extrabold font-mono text-orange-400 mt-2">{metrics.postureScore}%</div>
+              <p className="text-[10px] text-gray-500 font-medium mt-2 border-t border-white/5 pt-2">
+                Spine Tilt: <span className="font-bold text-gray-300 font-mono">{metrics.spineTilt}°</span>
+              </p>
+            </div>
+
+            {/* Balance Score */}
+            <div className="bg-white/3 border border-white/5 rounded-xl p-4 flex flex-col justify-between shadow-inner">
+              <span className="text-[10px] text-gray-400 font-bold block tracking-wider uppercase">Body Balance</span>
+              <div className="text-3xl font-extrabold font-mono text-gray-100 mt-2">{metrics.balanceScore}%</div>
+              <p className="text-[10px] text-gray-500 font-medium mt-2 border-t border-white/5 pt-2">
+                Pelvic level leveling symmetry
+              </p>
+            </div>
+
+            {/* Elbow Angle */}
+            <div className="bg-white/3 border border-white/5 rounded-xl p-4 flex flex-col justify-between shadow-inner">
+              <span className="text-[10px] text-gray-400 font-bold block tracking-wider uppercase">Elbow Angle</span>
+              <div className="text-2xl font-bold font-mono text-primary mt-2">{metrics.elbowAngle}°</div>
+              <p className="text-[10px] text-gray-500 font-medium mt-2 border-t border-white/5 pt-2">
+                Target: {config.analysisType === "bowling" ? "80° - 110°" : "90° - 110°"}
+              </p>
+            </div>
+
+            {/* Knee Angle */}
+            <div className="bg-white/3 border border-white/5 rounded-xl p-4 flex flex-col justify-between shadow-inner">
+              <span className="text-[10px] text-gray-400 font-bold block tracking-wider uppercase">Knee Angle</span>
+              <div className="text-2xl font-bold font-mono text-gray-100 mt-2">{metrics.kneeAngle}°</div>
+              <p className="text-[10px] text-gray-500 font-medium mt-2 border-t border-white/5 pt-2">
+                Lead landing leg extension
+              </p>
+            </div>
+
+            {/* Hip Angle */}
+            <div className="bg-white/3 border border-white/5 rounded-xl p-4 flex flex-col justify-between shadow-inner">
+              <span className="text-[10px] text-gray-400 font-bold block tracking-wider uppercase">Hip Angle</span>
+              <div className="text-2xl font-bold font-mono text-gray-100 mt-2">{metrics.hipAngle}°</div>
+              <p className="text-[10px] text-gray-500 font-medium mt-2 border-t border-white/5 pt-2">
+                Vertex: Hip bending ratio
+              </p>
+            </div>
+
+            {/* Shoulder Angle */}
+            <div className="bg-white/3 border border-white/5 rounded-xl p-4 flex flex-col justify-between shadow-inner">
+              <span className="text-[10px] text-gray-400 font-bold block tracking-wider uppercase">Shoulder Angle</span>
+              <div className="text-2xl font-bold font-mono text-gray-100 mt-2">{metrics.shoulderAngle}°</div>
+              <p className="text-[10px] text-gray-500 font-medium mt-2 border-t border-white/5 pt-2">
+                Shoulder Alignment: <span className="font-bold text-gray-300 font-mono">{metrics.shoulderAlignment}°</span>
+              </p>
+            </div>
+          </div>
+
+          {/* Warnings Panel */}
+          {metrics.warnings.length > 0 && (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex flex-wrap gap-2 items-center">
+              <span className="text-xs font-bold text-red-400 font-mono uppercase flex items-center gap-1.5">
+                <AlertTriangle className="h-4 w-4 shrink-0 text-red-500" /> Active Biomechanical Errors:
+              </span>
+              {metrics.warnings.map((warn, i) => (
+                <span key={i} className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded font-sans uppercase">
+                  {warn}
+                </span>
+              ))}
             </div>
           )}
-        </div>
-      </div>
 
-      {/* AI COACH COMPACT BAR */}
-      <div className="fixed bottom-4 left-4 right-4 z-50 flex items-center justify-between bg-gray-950/95 backdrop-blur-md border border-orange-500/30 rounded-full px-4 md:px-6 shadow-[0_0_15px_rgba(249,115,22,0.2)] transition-all duration-300" style={{ height: '56px' }}>
-        {/* Left side: small animated orange mic/sound icon that pulses when speaking */}
-        <div className="flex items-center justify-center shrink-0">
-          <div className={`p-2 rounded-full text-orange-500 ${isSpeaking ? 'animate-pulse scale-110' : ''}`}>
-            <Mic className="h-4 w-4" />
+          {/* Snapshots bottom gallery strip */}
+          <div className="border border-white/5 bg-gray-900/40 rounded-2xl p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-gray-300 uppercase tracking-widest">
+                Auto Snapshot Gallery Logs
+              </h3>
+              <span className="text-[10px] font-mono text-gray-500">
+                {snapshots.length} captured frames (click for details)
+              </span>
+            </div>
+            
+            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin select-none">
+              {snapshots.map((snap) => (
+                <div 
+                  key={snap.id} 
+                  onClick={() => setSelectedSnapshot(snap)}
+                  className={`relative h-14 w-24 rounded-lg overflow-hidden border cursor-pointer hover:scale-[1.03] transition-all shrink-0 ${
+                    snap.type === "perfect" ? "border-emerald-500 bg-emerald-500/5" : "border-red-500 bg-red-500/5"
+                  }`}
+                >
+                  <img src={snap.image} className="w-full h-full object-cover" />
+                  <div className={`absolute bottom-0 inset-x-0 text-[8px] font-bold px-1.5 py-0.5 truncate text-center ${
+                    snap.type === "perfect" ? "bg-emerald-500 text-white" : "bg-red-500 text-white"
+                  }`}>
+                    {snap.label}
+                  </div>
+                </div>
+              ))}
+
+              {snapshots.length === 0 && (
+                <div className="text-[11px] text-gray-500 italic flex items-center py-2">
+                  Snapshots will capture automatically when form errors or perfect movements occur.
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Center: coach feedback text (single line, truncate if too long) */}
-        <div className="flex-1 min-w-0 px-3 md:px-4 text-center">
-          <p className="text-xs md:text-sm font-medium text-gray-200 truncate whitespace-nowrap">
-            {transcript}
-          </p>
-        </div>
-
-        {/* Right side: small "COACH" label in orange */}
-        <div className="shrink-0 flex items-center">
-          <span className="text-[10px] md:text-xs font-bold text-orange-500 tracking-wider uppercase font-mono">
-            COACH
-          </span>
-        </div>
-      </div>
+        {/* Footer Area */}
+        <footer className="mt-8 pt-4 border-t border-white/5 flex flex-col md:flex-row justify-between items-center text-[10px] font-mono text-gray-500 gap-2 shrink-0">
+          <span>KINETRA ATHLETE PROFILE • Edge Computer Vision Inference running locally</span>
+          <span>© 2026 Kinetra Coaching. All rights reserved.</span>
+        </footer>
+      </section>
 
       {/* DETAILED SNAPSHOT MODAL PREVIEW OVERLAY */}
       <AnimatePresence>
@@ -809,7 +833,6 @@ export default function Analysis() {
           </div>
         )}
       </AnimatePresence>
-
     </div>
   );
 }

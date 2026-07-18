@@ -19,7 +19,7 @@ class Config:
     SESSIONS_DIR = BASE_DIR / "sessions"
     
     # ONNX Execution Provider Settings
-    USE_QNN = os.getenv("USE_QNN", "true").lower() == "true"
+    USE_QNN = os.getenv("USE_QNN", "false").lower() == "true"
     # QNN backend can be QnnHtp.dll (NPU), QnnGpu.dll (GPU) or QnnCpu.dll (CPU)
     QNN_BACKEND_PATH = os.getenv("QNN_BACKEND_PATH", "QnnHtp.dll")
     

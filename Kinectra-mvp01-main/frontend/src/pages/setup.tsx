@@ -12,7 +12,10 @@ import {
   Camera, 
   Upload, 
   AlertTriangle, 
-  FileVideo 
+  FileVideo,
+  Zap,
+  Target,
+  Flower2
 } from "lucide-react";
 
 import { Navbar } from "@/components/layout/navbar";
@@ -28,10 +31,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useStartSession } from "@workspace/api-client-react";
 import { useSessionContext } from "@/contexts/SessionContext";
 import ProcessingScreen from "@/components/analysis/ProcessingScreen";
+import { arduinoHardware } from "@/utils/hardware-placeholder";
+import { useEffect } from "react";
 
 const setupSchema = z.object({
   athleteName: z.string().min(2, "Name must be at least 2 characters"),
-  analysisType: z.enum(["bowling", "batting"]),
+  analysisType: z.enum(["bowling", "batting", "shooting", "urdhva_hastasana"]),
   skillLevel: z.enum(["beginner", "intermediate", "advanced", "professional"]),
   dominantHand: z.enum(["right", "left"]),
 });
@@ -43,7 +48,9 @@ export default function Setup() {
   const { setConfig } = useSessionContext();
   const { toast } = useToast();
   
+  const [selectedSport, setSelectedSport] = useState<"cricket" | "basketball" | "yoga">("cricket");
   const [analysisMode, setAnalysisMode] = useState<"live" | "upload">("live");
+  const [poseProcessor, setPoseProcessor] = useState<"local" | "npu">("local");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [videoDuration, setVideoDuration] = useState<number | null>(null);
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
@@ -61,6 +68,25 @@ export default function Setup() {
       dominantHand: "right",
     },
   });
+
+  // Listen to future Arduino Rotary Knob input event switches
+  useEffect(() => {
+    const unsubscribe = arduinoHardware.onSportSwitch((sport) => {
+      setSelectedSport(sport);
+      if (sport === "cricket") {
+        form.setValue("analysisType", "bowling");
+      } else if (sport === "basketball") {
+        form.setValue("analysisType", "shooting");
+      } else if (sport === "yoga") {
+        form.setValue("analysisType", "urdhva_hastasana");
+      }
+      toast({
+        title: `Rotary Knob: ${sport.toUpperCase()}`,
+        description: `Switched active sport mode to ${sport.toUpperCase()}`,
+      });
+    });
+    return unsubscribe;
+  }, [form]);
 
   const startSessionMutation = useStartSession();
 
@@ -118,6 +144,7 @@ export default function Setup() {
               analysisType: data.analysisType,
               skillLevel: data.skillLevel,
               dominantHand: data.dominantHand,
+              poseProcessor: poseProcessor,
             });
             toast({
               title: "Session Created",
@@ -204,34 +231,108 @@ export default function Setup() {
                 name="analysisType"
                 render={({ field }) => (
                   <FormItem className="space-y-4">
-                    <FormLabel className="text-base font-semibold">Discipline</FormLabel>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-border/40 pb-2">
+                      <FormLabel className="text-base font-semibold">Sport & Discipline</FormLabel>
+                      <div className="flex gap-2 bg-muted/30 p-1.5 rounded-lg border border-border/30">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={selectedSport === "cricket" ? "default" : "ghost"}
+                          onClick={() => {
+                            setSelectedSport("cricket");
+                            field.onChange("bowling");
+                          }}
+                          className="font-medium text-xs rounded-md"
+                        >
+                          Cricket
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={selectedSport === "basketball" ? "default" : "ghost"}
+                          onClick={() => {
+                            setSelectedSport("basketball");
+                            field.onChange("shooting");
+                          }}
+                          className="font-medium text-xs rounded-md"
+                        >
+                          Basketball
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={selectedSport === "yoga" ? "default" : "ghost"}
+                          onClick={() => {
+                            setSelectedSport("yoga");
+                            field.onChange("urdhva_hastasana");
+                          }}
+                          className="font-medium text-xs rounded-md"
+                        >
+                          Yoga
+                        </Button>
+                      </div>
+                    </div>
                     <FormControl>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Card 
-                          className={`cursor-pointer border-2 transition-all ${field.value === 'bowling' ? 'border-primary bg-primary/5' : 'border-transparent hover:border-primary/30'} `}
-                          onClick={() => field.onChange("bowling")}
-                        >
-                          <CardContent className="p-6 flex flex-col items-center justify-center text-center h-full">
-                            <div className="w-12 h-12 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center mb-4">
-                              <Activity className="h-6 w-6 text-primary" />
-                            </div>
-                            <h3 className="font-semibold text-lg mb-1">Pace / Spin Bowling</h3>
-                            <p className="text-sm text-muted-foreground">Analyze arm angles, spine tilt, and delivery stride biomechanics.</p>
-                          </CardContent>
-                        </Card>
-                        
-                        <Card 
-                          className={`cursor-pointer border-2 transition-all ${field.value === 'batting' ? 'border-primary bg-primary/5' : 'border-transparent hover:border-primary/30'} `}
-                          onClick={() => field.onChange("batting")}
-                        >
-                          <CardContent className="p-6 flex flex-col items-center justify-center text-center h-full">
-                            <div className="w-12 h-12 rounded-full bg-accent/30 dark:bg-accent/15 flex items-center justify-center mb-4">
-                              <CircleUserRound className="h-6 w-6 text-primary" />
-                            </div>
-                            <h3 className="font-semibold text-lg mb-1">Batting Stance</h3>
-                            <p className="text-sm text-muted-foreground">Track head stability, front foot planting, and bat lift angles.</p>
-                          </CardContent>
-                        </Card>
+                        {selectedSport === "cricket" && (
+                          <>
+                            <Card 
+                              className={`cursor-pointer border-2 transition-all ${field.value === 'bowling' ? 'border-primary bg-primary/5' : 'border-transparent hover:border-primary/30'} `}
+                              onClick={() => field.onChange("bowling")}
+                            >
+                              <CardContent className="p-6 flex flex-col items-center justify-center text-center h-full">
+                                <div className="w-12 h-12 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center mb-4">
+                                  <Activity className="h-6 w-6 text-primary" />
+                                </div>
+                                <h3 className="font-semibold text-lg mb-1">Pace / Spin Bowling</h3>
+                                <p className="text-sm text-muted-foreground">Analyze arm angles, spine tilt, and delivery stride biomechanics.</p>
+                              </CardContent>
+                            </Card>
+                            
+                            <Card 
+                              className={`cursor-pointer border-2 transition-all ${field.value === 'batting' ? 'border-primary bg-primary/5' : 'border-transparent hover:border-primary/30'} `}
+                              onClick={() => field.onChange("batting")}
+                            >
+                              <CardContent className="p-6 flex flex-col items-center justify-center text-center h-full">
+                                <div className="w-12 h-12 rounded-full bg-accent/30 dark:bg-accent/15 flex items-center justify-center mb-4">
+                                  <CircleUserRound className="h-6 w-6 text-primary" />
+                                </div>
+                                <h3 className="font-semibold text-lg mb-1">Batting Stance</h3>
+                                <p className="text-sm text-muted-foreground">Track head stability, front foot planting, and bat lift angles.</p>
+                              </CardContent>
+                            </Card>
+                          </>
+                        )}
+
+                        {selectedSport === "basketball" && (
+                          <Card 
+                            className={`cursor-pointer border-2 transition-all col-span-1 md:col-span-2 ${field.value === 'shooting' ? 'border-primary bg-primary/5' : 'border-transparent hover:border-primary/30'} `}
+                            onClick={() => field.onChange("shooting")}
+                          >
+                            <CardContent className="p-6 flex flex-col items-center justify-center text-center h-full">
+                              <div className="w-12 h-12 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center mb-4">
+                                <Target className="h-6 w-6 text-primary" />
+                              </div>
+                              <h3 className="font-semibold text-lg mb-1">Shooting Posture</h3>
+                              <p className="text-sm text-muted-foreground">Analyze elbow loaded angle, follow-through extension, jump shot posture, and back stability.</p>
+                            </CardContent>
+                          </Card>
+                        )}
+
+                        {selectedSport === "yoga" && (
+                          <Card 
+                            className={`cursor-pointer border-2 transition-all col-span-1 md:col-span-2 ${field.value === 'urdhva_hastasana' ? 'border-primary bg-primary/5' : 'border-transparent hover:border-primary/30'} `}
+                            onClick={() => field.onChange("urdhva_hastasana")}
+                          >
+                            <CardContent className="p-6 flex flex-col items-center justify-center text-center h-full">
+                              <div className="w-12 h-12 rounded-full bg-accent/30 dark:bg-accent/15 flex items-center justify-center mb-4">
+                                <Flower2 className="h-6 w-6 text-primary" />
+                              </div>
+                              <h3 className="font-semibold text-lg mb-1">Urdhva Hastasana (Raised Hands)</h3>
+                              <p className="text-sm text-muted-foreground">Verify vertical arm extension, level shoulders, spine lengthening, and overall foot balance.</p>
+                            </CardContent>
+                          </Card>
+                        )}
                       </div>
                     </FormControl>
                     <FormMessage />
@@ -270,6 +371,7 @@ export default function Setup() {
                   </Card>
                 </div>
               </div>
+
 
               {/* Drag and Drop Upload Area */}
               {analysisMode === "upload" && (

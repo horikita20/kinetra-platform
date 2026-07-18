@@ -144,7 +144,7 @@ def compute_metrics(keypoints: list, analysis_type: str, dominant_hand: str) -> 
             spine_score * 0.30 +
             alignment_score * 0.20
         )
-    else:
+    elif analysis_type.lower() == "batting":
         # Batting technique rules
         if knee_angle < 120:
             warnings.append("Front knee bent too much")
@@ -161,6 +161,49 @@ def compute_metrics(keypoints: list, analysis_type: str, dominant_hand: str) -> 
             knee_score * 0.30 +
             spine_score * 0.20 +
             alignment_score * 0.20
+        )
+    elif analysis_type.lower() == "shooting":
+        # Basketball Shooting
+        if elbow_angle < 130:
+            warnings.append("Incomplete follow-through")
+        if spine_tilt > 18:
+            warnings.append("Lean during jump shot")
+        if knee_angle < 100:
+            warnings.append("Excessive knee bend")
+            
+        elbow_score = max(0.0, 100.0 - abs(165.0 - elbow_angle) * 1.5)
+        spine_score = max(0.0, 100.0 - spine_tilt * 3.0)
+        alignment_score = max(0.0, 100.0 - shoulder_alignment * 2.0)
+        knee_score = max(0.0, 100.0 - max(0.0, 100.0 - knee_angle) * 0.8)
+        
+        technique_score = (
+            balance_score * 0.20 +
+            elbow_score * 0.30 +
+            spine_score * 0.30 +
+            alignment_score * 0.10 +
+            knee_score * 0.10
+        )
+    elif analysis_type.lower() == "urdhva_hastasana":
+        # Yoga raised arms pose
+        shoulder_angle = calculate_angle(hip, shoulder, elbow)
+        if shoulder_angle < 145:
+            warnings.append("Raise arms fully overhead")
+        if elbow_angle < 155:
+            warnings.append("Straighten your elbows")
+        if spine_tilt > 12:
+            warnings.append("Straighten your spine / torso")
+        if balance_score < 85:
+            warnings.append("Unstable foot balance")
+            
+        shoulder_score = max(0.0, 100.0 - abs(170.0 - shoulder_angle) * 2.5)
+        elbow_score = max(0.0, 100.0 - abs(180.0 - elbow_angle) * 3.0)
+        spine_score = max(0.0, 100.0 - spine_tilt * 4.0)
+        
+        technique_score = (
+            balance_score * 0.25 +
+            shoulder_score * 0.25 +
+            elbow_score * 0.25 +
+            spine_score * 0.25
         )
 
     return {

@@ -7,6 +7,7 @@ export interface SessionConfig {
   analysisType: SessionInputAnalysisType;
   skillLevel: SessionInputSkillLevel;
   dominantHand: SessionInputDominantHand;
+  poseProcessor: "local" | "npu";
 }
 
 interface SessionContextType {
@@ -21,6 +22,7 @@ const defaultConfig: SessionConfig = {
   analysisType: "bowling",
   skillLevel: "intermediate",
   dominantHand: "right",
+  poseProcessor: "local",
 };
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined);

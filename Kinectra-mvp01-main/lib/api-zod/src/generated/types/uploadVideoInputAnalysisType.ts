@@ -12,4 +12,6 @@ export type UploadVideoInputAnalysisType = typeof UploadVideoInputAnalysisType[k
 export const UploadVideoInputAnalysisType = {
   bowling: 'bowling',
   batting: 'batting',
+  shooting: 'shooting',
+  urdhva_hastasana: 'urdhva_hastasana',
 } as const;
