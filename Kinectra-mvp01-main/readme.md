@@ -1,111 +1,126 @@
-# KINETRA — Multi-Device Edge AI Cricket Coaching
+# KINETRA — Multi-Device Edge AI Sports Intelligence Platform
 
-> Built for Snapdragon Multiverse Hackathon, Noida 2026
+Built for the Snapdragon Multiverse Hackathon, Noida 2026.
 
-Real-time cricket biomechanics coaching platform that distributes AI intelligence across 4 Snapdragon devices.
+---
 
-## Team
-- Sharad Gaur — Architecture & Presentation  
-- Monica — Software & AI Development
-- Harsh — Hardware & Arduino Integration
+### The Problem We Are Solving
 
-## Multi-Device Architecture
+Elite biomechanics coaching is traditionally locked behind expensive laboratories and specialized high-cost equipment. At the grassroots level, young athletes and players practice sports without access to real-time posture analysis. This leads to inefficient movement patterns, poor sports form, and a significantly higher risk of physical injuries. 
 
-| Device | Role |
-|--------|------|
-| 📱 OnePlus 15 (Mobile) | Live video capture → streams frames via WebSocket |
-| 💻 Surface Laptop 7 Snapdragon X Elite | Pose estimation via onnxruntime-qnn on NPU |
-| 🔌 Arduino UNO Q | Real-time LED/buzzer/haptic feedback |
-| ☁️ Qualcomm Cloud AI 100 | Session storage + long-term analytics |
+We wanted to change this by democratizing access to elite biomechanics coaching, putting high-quality real-time form feedback directly in the hands of everyday players and coaches at the grassroots level.
 
-## Setup & Run
+---
 
-### Option A — Full Multi-Device Mode (Hackathon Demo)
+### Our Solution
 
-**PC Backend (Snapdragon X Elite):**
-```bash
-cd Kinectra-mvp01-main/backend
-pip install -r requirements.txt
-python main.py
-# Starts on 0.0.0.0:8000
-# Auto-detects Arduino on USB
-# Loads YOLOv8-pose via onnxruntime-qnn
-```
+**Kinetra** is a real-time, multi-device Edge AI sports intelligence platform. It runs a biomechanical computer vision model that orchestrates distributed AI workflows across local devices to keep processing local, fast, and latency-free. 
 
-**Frontend:**
-```bash
-cd Kinectra-mvp01-main
-pnpm install
-pnpm --filter @workspace/kinetra run dev
-```
+By running pose estimation and biomechanics calculations directly at the edge, Kinetra analyzes athletic movements (like cricket bowling and batting) as they happen. It then triggers physical, instantaneous sensory feedback (lights, buzzers, and haptics) to guide the player's form without requiring them to look at a screen.
 
-**Arduino:**
-- Open `backend/arduino/kinetra_arduino.ino` in Arduino IDE App Lab
-- Flash to Arduino UNO Q
-- Connect via USB to PC
+---
 
-**Mobile:**
-- Open browser on OnePlus 15
-- Go to `http://<PC-IP>:5173`
-- Allow camera access
-- Frames stream to PC automatically via WebSocket
+### The Hardware & How It Works
 
-### Option B — Browser-Only Mode (Fallback)
-```bash
-cd Kinectra-mvp01-main
-pnpm install
-pnpm --filter @workspace/api-server run dev
-pnpm --filter @workspace/kinetra run dev
-```
-Required env: `DATABASE_URL` — Postgres connection string
+Kinetra divides its workload across edge hardware:
 
-## How the Multi-Device Flow Works
-1. 📱 Mobile camera captures live bowling session
-2. 📡 Frames streamed to PC via WebSocket (ws://PC-IP:8000/ws/stream)
-3. 💻 PC runs YOLOv8-pose via onnxruntime-qnn on Snapdragon NPU
-4. 📐 Joint angles calculated: elbow, knee, spine, shoulder, balance
-5. 🎯 Technique score generated (0-100)
-6. 🔌 Arduino receives serial command: G (good) / W (warning) / D (danger)
-7. 💡 LED + buzzer + vibration fires instantly
-8. ☁️ Session data synced to Qualcomm Cloud AI 100
-9. 📊 Player history and trends available on dashboard
+1. **📱 Edge Capture & Landmark Detection (OnePlus 15 Mobile)**
+   The OnePlus 15 acts as the edge capture device. It records the athlete’s movement, extracts the 33 landmark body points to evaluate their form, and streams the body coordinate metadata directly to the local host PC via WebSockets.
 
-## Tech Stack
+2. **💻 Deep Inference & Analytics Engine (Surface Laptop 7 with Snapdragon X Elite)**
+   The laptop hosts our core backend. It processes the incoming stream, handles inference, runs biomechanical joint-angle calculations (elbow extension, knee bend, spine tilt, shoulder alignment, and balance stability), and quantizes pose data to calculate a real-time performance score (0-100).
 
-**Multi-device layer:**
-- PC ML: onnxruntime-qnn (QNNExecutionProvider — Snapdragon NPU)
-- CV Model: YOLOv8-pose ONNX
-- IoT: Arduino UNO Q via pyserial
-- Cloud: Qualcomm Cloud AI 100 REST API
-- Device comms: WebSocket + Serial
+3. **🔌 Instant Sensory Feedback (Arduino UNO Q)**
+   Connected to the PC via USB serial, the Arduino UNO Q receives instant state commands based on the computed form score. It fires physical indicators—color-coded LEDs, custom buzzer frequencies, and haptic vibration motors—to immediately notify the athlete if their form is correct, sub-optimal, or hazardous.
 
-**Application layer:**
-- Frontend: React + Vite + TailwindCSS + Framer Motion
-- Browser CV: MediaPipe Tasks Vision (WASM fallback)
-- Backend: FastAPI (Python) + Express 5 (Node)
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod, drizzle-zod
-- Build: pnpm workspaces, esbuild
+4. **☁️ Longitudinal Tracking (Qualcomm Cloud AI 100)**
+   Session summaries and historical trends are uploaded to the cloud for longitudinal performance tracking and analytics dashboards.
 
-## Scoring Formula
-`overall = posture * 0.30 + alignment * 0.25 + stability * 0.25 + efficiency * 0.20`
+---
 
-## Architecture Decisions
-- Primary inference on Snapdragon NPU via onnxruntime-qnn — not cloud, not browser
-- MediaPipe WASM kept as browser fallback mode
-- Arduino feedback is physical and instantaneous — no screen needed
-- Cloud AI 100 used only for longitudinal analytics (not primary inference)
-- Edge-first design: works fully offline except Cloud sync
+### Team
+- **Sharad** — Architecture & Presentation  
+- **Monika** — Software & AI Development  
+- **Harsh** — Hardware & Arduino Integration  
 
-## Where Things Live
-- `backend/main.py` — FastAPI entry point
-- `backend/services/pose_detector.py` — YOLOv8 + QNN inference
-- `backend/services/angle_calculator.py` — joint angle math
-- `backend/services/arduino_serial.py` — serial communication
-- `backend/services/session_manager.py` — session telemetry
-- `backend/routes/analysis.py` — WebSocket endpoint
-- `frontend/src/pages/` — 4 app pages
-- `frontend/src/hooks/use-kinetra-analysis.ts` — CV pipeline
+---
 
-## License
-MIT — Open source, freely available
+### Project Structure
+
+Here is where the core parts of the system live:
+* [main.py](file:///c:/Users/ggaur/Downloads/Kinectra-mvp01-main%20%281%29/Kinectra-mvp01-main/backend/main.py) — The FastAPI backend entry point.
+* [pose_detector.py](file:///c:/Users/ggaur/Downloads/Kinectra-mvp01-main%20%281%29/Kinectra-mvp01-main/backend/services/pose_detector.py) — Manages ONNX Runtime sessions, YOLOv8 pose models, and QNN NPU execution provider settings.
+* [angle_calculator.py](file:///c:/Users/ggaur/Downloads/Kinectra-mvp01-main%20%281%29/Kinectra-mvp01-main/backend/services/angle_calculator.py) — Handles all the biomechanics math (calculating angles between joint vectors).
+* [arduino_serial.py](file:///c:/Users/ggaur/Downloads/Kinectra-mvp01-main%20%281%29/Kinectra-mvp01-main/backend/services/arduino_serial.py) — Manages the USB connection and control codes sent to the Arduino.
+* [session_manager.py](file:///c:/Users/ggaur/Downloads/Kinectra-mvp01-main%20%281%29/Kinectra-mvp01-main/backend/services/session_manager.py) — Aggregates and stores session summaries.
+* [analysis.py](file:///c:/Users/ggaur/Downloads/Kinectra-mvp01-main%20%281%29/Kinectra-mvp01-main/backend/routes/analysis.py) — WebSocket handler that accepts the base64 frame/metadata stream.
+* [pages/](file:///c:/Users/ggaur/Downloads/Kinectra-mvp01-main%20%281%29/Kinectra-mvp01-main/frontend/src/pages/) — The React UI pages (dashboard, sessions, and live analysis).
+* [use-kinetra-analysis.ts](file:///c:/Users/ggaur/Downloads/Kinectra-mvp01-main%20%281%29/Kinectra-mvp01-main/frontend/src/hooks/use-kinetra-analysis.ts) — The frontend WebSocket coordinator.
+
+---
+
+### Setup & Execution
+
+#### Option A: Full Multi-Device Mode (Recommended / Snapdragon Hackathon Setup)
+
+This mode runs inference on the Snapdragon NPU and coordinates with all edge hardware.
+
+1. **Flash the Arduino:**
+   * Open `backend/arduino/kinetra_arduino.ino` in the Arduino IDE.
+   * Flash the code onto your **Arduino UNO Q** and connect it to your PC via USB.
+
+2. **Run the PC Backend:**
+   * Navigate to the backend directory, install the dependencies, and start the server:
+     ```bash
+     cd backend
+     pip install -r requirements.txt
+     python main.py
+     ```
+   * The server runs on port `8000`. It will auto-detect the connected Arduino and prepare the YOLOv8-pose model for `onnxruntime-qnn` on the NPU.
+
+3. **Start the Frontend Web App:**
+   * Go to the project root, install dependencies, and start the development server:
+     ```bash
+     pnpm install
+     pnpm --filter @workspace/kinetra run dev
+     ```
+
+4. **Connect the Capture Phone:**
+   * Open the web browser on your **OnePlus 15** (or secondary capture device) and go to `http://<YOUR_PC_IP>:5173`.
+   * Enable camera access. The device will capture form, resolve the 33 body landmarks, and start streaming metrics to the PC via WebSockets.
+
+---
+
+#### Option B: Browser-Only Fallback Mode (No Hardware Required)
+
+If you don't have the external phone, NPU-capable laptop, or Arduino, you can run a local browser emulation mode utilizing WASM-compiled MediaPipe.
+
+1. **Install and Run:**
+   * Ensure a Postgres database is available and set your `DATABASE_URL` environment variable.
+   * Run the local API server and frontend:
+     ```bash
+     pnpm install
+     pnpm --filter @workspace/api-server run dev
+     pnpm --filter @workspace/kinetra run dev
+     ```
+   * Open `http://localhost:5173` on your PC, select local mode, and use your PC webcam to test the interface.
+
+---
+
+### Biomechanical Metrics & Scoring
+
+Kinetra calculates technique scores based on joint angles computed from keypoints:
+* **Elbow Angle**: Detects throws or illegal arm extensions (e.g. 15-degree limit in cricket bowling).
+* **Knee Angle**: Ensures optimal front knee bending during delivery stride.
+* **Spine Tilt**: Measures lateral lean and posture stability.
+* **Shoulder Alignment**: Tracks rotation symmetry throughout the action.
+
+The overall form score is weighted as:
+`Overall Score = Posture (30%) + Alignment (25%) + Stability (25%) + Efficiency (20%)`
+
+---
+
+### License
+
+MIT License — Open Source and free to use.
+
